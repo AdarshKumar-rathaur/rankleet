@@ -83,7 +83,18 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
 
-// 404 handler
+// Serve static files from the React app build directory
+if (process.env.NODE_ENV === "production") {
+  const path = require("path");
+  app.use(express.static(path.join(__dirname, "../client/dist")));
+
+  // Handle client-side routing - send all non-API requests to React app
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+  });
+}
+
+// 404 handler for API routes
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });

@@ -207,6 +207,45 @@ RankLeet/
 - ✅ Secure error handling
 
 
+## 🚀 Deployment
+
+### Render.com (Recommended)
+
+1. **Connect Repository**
+   - Fork/clone this repository to GitHub
+   - Connect to Render.com dashboard
+
+2. **Environment Variables**
+   ```env
+   NODE_ENV=production
+   MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/rankleet
+   JWT_SECRET=your-very-secure-random-jwt-secret-here
+   CLIENT_URL=https://your-app-name.onrender.com
+   ```
+
+3. **Deploy Settings**
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm start`
+   - **Node Version**: 18+ (or latest LTS)
+
+4. **Database Setup**
+   - Create MongoDB Atlas cluster
+   - Whitelist Render IP (0.0.0.0/0) in network access
+   - Create database user with read/write permissions
+
+### Manual Deployment
+
+```bash
+# Install dependencies
+npm run postinstall
+
+# Build frontend
+npm run build
+
+# Start production server
+npm start
+```
+
 ### Quick Deploy Checklist
 1. Configure all environment variables
 2. Generate strong JWT_SECRET
