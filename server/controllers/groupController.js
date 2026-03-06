@@ -38,7 +38,7 @@ exports.joinGroupByLink = async (req, res) => {
         }
 
         // Check if already a member
-        if (group.members.includes(req.user._id)) {
+        if (group.members.some(id => id.toString() === req.user._id.toString())) {
             return res.status(200).json({
                 message: "Already a member",
                 groupId: group._id,

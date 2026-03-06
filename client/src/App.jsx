@@ -30,7 +30,7 @@ function App() {
             />
 
             <Route
-              path="/group/:id"
+              path="/group/:groupId"
               element={
                 <ProtectedRoute>
                   <Group />

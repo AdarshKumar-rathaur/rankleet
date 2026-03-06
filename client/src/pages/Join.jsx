@@ -29,13 +29,17 @@ function Join() {
 
       try {
         const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(inviteCode));
+        const groupId = res?.data?.groupId;
+        if (groupId) {
+          setMessage("Joined successfully! Redirecting...");
 
-        setMessage("Joined successfully! Redirecting...");
-        setIsError(false);
-
-        setTimeout(() => {
-          navigate(`/group/${res.data.groupId}`);
-        }, 1500);
+          setIsError(false);
+          setTimeout(() => {
+            navigate(`/group/${groupId}`);
+          }, 1500);
+        } else {
+          throw new Error("Server did not return a valid Group ID");
+        }
       } catch (error) {
         const errorMsg = error.message || "Invalid or expired invite link";
         setMessage(errorMsg);
@@ -48,10 +52,14 @@ function Join() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-      <div className={`p-8 rounded-xl text-center shadow ${isError ? "bg-red-500/20 border border-red-500" : "bg-gray-800"}`}>
+      <div
+        className={`p-8 rounded-xl text-center shadow ${isError ? "bg-red-500/20 border border-red-500" : "bg-gray-800"}`}
+      >
         <h1 className="text-2xl font-bold mb-4">RankLeet</h1>
 
-        <p className={`mb-6 ${isError ? "text-red-400" : "text-gray-300"}`}>{message}</p>
+        <p className={`mb-6 ${isError ? "text-red-400" : "text-gray-300"}`}>
+          {message}
+        </p>
 
         {isError && (
           <button
