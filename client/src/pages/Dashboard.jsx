@@ -16,35 +16,37 @@ function Dashboard() {
 
   const navigate = useNavigate();
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const profileRes = await API.get(API_ENDPOINTS.USERS.PROFILE);
+      setProfile(profileRes.data);
+
+      const groupsRes = await API.get(API_ENDPOINTS.USERS.GROUPS);
+      setGroups(groupsRes.data || []);
+      setGroupError("");
+    } catch (err) {
+      console.error("Failed to fetch data", err);
+      setGroupError(err.message || "Failed to load dashboard");
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const profileRes = await API.get(API_ENDPOINTS.USERS.PROFILE);
-        setProfile(profileRes.data);
-
-        const groupsRes = await API.get(API_ENDPOINTS.USERS.GROUPS);
-        setGroups(groupsRes.data || []);
-        setGroupError("");
-      } catch (err) {
-        console.error("Failed to fetch data", err);
-        setGroupError(err.message || "Failed to load dashboard");
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchData(); // or whatever your fetch function is named here
   }, []);
 
   const createGroup = async () => {
     try {
-      const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, { name: groupName });
+      const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, {
+        name: groupName,
+      });
       setGroups([...groups, res.data]);
       setShowCreate(false);
       setGroupName("");
-      navigate(`/group/${res.data._id}`);
+      navigate(`/group/${res.data.inviteCode}`);
     } catch (err) {
       alert(err.message || "Error creating group");
       setShowCreate(false);
@@ -57,7 +59,7 @@ function Dashboard() {
       const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(inviteCode));
       setShowJoin(false);
       setInviteCode("");
-      navigate(`/group/${res.data.groupId}`);
+      navigate(`/group/${inviteCode}`);
     } catch (err) {
       alert(err.message || "Invalid invite code");
       setShowJoin(false);
@@ -65,16 +67,22 @@ function Dashboard() {
     }
   };
 
-  if (loading) return <div className="p-10 text-center text-gray-400">Loading dashboard...</div>;
+  if (loading)
+    return (
+      <div className="p-10 text-center text-gray-400">Loading dashboard...</div>
+    );
 
-  if (!profile) return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Navbar />
-      <div className="p-10 text-center">
-        <p className="text-red-400">{groupError || "Failed to load profile"}</p>
+  if (!profile)
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Navbar />
+        <div className="p-10 text-center">
+          <p className="text-red-400">
+            {groupError || "Failed to load profile"}
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -148,12 +156,14 @@ function Dashboard() {
             <div className="space-y-3">
               {groups.map((group) => (
                 <div
-                  key={group._id}
-                  onClick={() => navigate(`/group/${group._id}`)}
+                  key={group.inviteCode}
+                  onClick={() => navigate(`/group/${group.inviteCode}`)}
                   className="bg-gray-700 p-4 rounded cursor-pointer hover:bg-gray-600"
                 >
                   <p className="font-semibold">{group.name}</p>
-                  <p className="text-sm text-gray-400">{group.members?.length || 0} members</p>
+                  <p className="text-sm text-gray-400">
+                    {Array.isArray(group.members) ? group.members.length : 0} members
+                  </p>
                 </div>
               ))}
             </div>
@@ -164,8 +174,14 @@ function Dashboard() {
       {/* Create Group Modal */}
 
       {showCreate && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60" onClick={() => setShowCreate(false)}>
-          <div className="bg-gray-800 p-6 rounded-xl w-80" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/60"
+          onClick={() => setShowCreate(false)}
+        >
+          <div
+            className="bg-gray-800 p-6 rounded-xl w-80"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl">Create Group</h2>
               <button
@@ -196,8 +212,14 @@ function Dashboard() {
       {/* Join Group Modal */}
 
       {showJoin && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60" onClick={() => setShowJoin(false)}>
-          <div className="bg-gray-800 p-6 rounded-xl w-80" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/60"
+          onClick={() => setShowJoin(false)}
+        >
+          <div
+            className="bg-gray-800 p-6 rounded-xl w-80"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl">Join Group</h2>
               <button

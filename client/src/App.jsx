@@ -30,7 +30,7 @@ function App() {
             />
 
             <Route
-              path="/group/:groupId"
+              path="/group/:inviteCode" // Changed from :groupId to :inviteCode
               element={
                 <ProtectedRoute>
                   <Group />

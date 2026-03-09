@@ -11,7 +11,10 @@ const validateRequestBody = (req, res, next) => {
     }
 
     // Check if request has body for POST/PUT/PATCH
-    if (!req.body || Object.keys(req.body).length === 0) {
+    // FIX: We skip this check if the user is joining a group via URL
+    const isJoinRoute = req.originalUrl && req.originalUrl.includes("/join/");
+
+    if (!isJoinRoute && (!req.body || Object.keys(req.body).length === 0)) {
       return res.status(400).json({ message: "Request body is empty" });
     }
 

@@ -11,43 +11,49 @@ function Join() {
   const [message, setMessage] = useState("Joining group...");
   const [isError, setIsError] = useState(false);
 
+  const joinGroup = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setMessage("Please login to join a group");
+      setIsError(true);
+      return;
+    }
+
+    if (!inviteCode) {
+      setMessage("Invalid invite link");
+      setIsError(true);
+      return;
+    }
+
+    try {
+      const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(inviteCode), {});
+      const groupId = res?.data?.inviteCode;
+      if (groupId) {
+        setMessage("Joined successfully! Redirecting...");
+
+        setIsError(false);
+        setTimeout(() => {
+          if (res.data.inviteCode) {
+            navigate(`/group/${res.data.inviteCode}`);
+          }
+        }, 1500);
+      } else {
+        throw new Error("Server did not return a valid Group ID");
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Invalid or expired invite link";
+      setMessage(errorMsg);
+      setIsError(true);
+    }
+  };
+
   useEffect(() => {
-    const joinGroup = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setMessage("Please login to join a group");
-        setIsError(true);
-        return;
-      }
-
-      if (!inviteCode) {
-        setMessage("Invalid invite link");
-        setIsError(true);
-        return;
-      }
-
-      try {
-        const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(inviteCode));
-        const groupId = res?.data?.groupId;
-        if (groupId) {
-          setMessage("Joined successfully! Redirecting...");
-
-          setIsError(false);
-          setTimeout(() => {
-            navigate(`/group/${groupId}`);
-          }, 1500);
-        } else {
-          throw new Error("Server did not return a valid Group ID");
-        }
-      } catch (error) {
-        const errorMsg = error.message || "Invalid or expired invite link";
-        setMessage(errorMsg);
-        setIsError(true);
-      }
-    };
-
-    joinGroup();
+    // Only call if we have an inviteCode
+    if (inviteCode) {
+      joinGroup();
+    }
   }, [inviteCode, navigate]);
 
   return (

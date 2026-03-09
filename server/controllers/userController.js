@@ -32,7 +32,7 @@ exports.getUserProfile = async (req, res) => {
                 await user.save();
             } catch (error) {
                 console.error("[PROFILE] Failed to refresh LeetCode stats:", error.message);
-                // Continue with cached stats
+                // Continue with cached stats so the UI doesn't break
             }
         }
 
@@ -51,7 +51,11 @@ exports.getUserProfile = async (req, res) => {
 
 exports.getUserGroups = async (req, res) => {
     try {
-        const groups = await Group.find({ members: req.user._id }).select("_id name createdBy").lean();
+        // We include 'members' so the frontend can do group.members.length
+        const groups = await Group.find({ members: req.user._id })
+            .select("inviteCode name createdBy members") 
+            .lean();
+
         res.json(groups);
     } catch (error) {
         console.error("[GET GROUPS] Error:", error.message);

@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const cron = require("node-cron");
 const axios = require("axios");
 
@@ -13,123 +12,61 @@ const refreshLeetCodeStats = require("./services/cronJobs");
 const validateEnv = require("./utils/envValidator");
 
 dotenv.config();
-
-// Validate environment configuration
 validateEnv();
-
 connectDB();
-refreshLeetCodeStats();
+refreshLeetCodeStats(); 
 
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.CLIENT_URL
-].filter(Boolean);
+// 1. Basic Middleware
+const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("CORS not allowed"));
+  },
+  credentials: true
+}));
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (!allowedOrigins.includes(origin)) {
-        return callback(new Error("CORS not allowed"), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
-
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "10kb" }));
 app.use(validateBody);
 
-// Global rate limiter
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests, please try again later",
-  standardHeaders: false,
-  legacyHeaders: false
-});
-
-// Stricter rate limiter for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: "Too many login attempts, please try again later",
-  standardHeaders: false,
-  legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === "development"
-});
-
-app.use(globalLimiter);
-
-// Apply stricter rate limiting to auth routes
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
-
+// 2. Health Check
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "RankLeet API is running" });
-});
-
+// 3. API Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
 
-// Serve static files from the React app build directory
-const path = require("path");
-app.use(express.static(path.join(__dirname, "../client/dist")));
-
-// Handle client-side routing - send all non-API requests to React app
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
-});
-
-// 404 handler for API routes
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-// Error handler middleware
+// 4. Global Error Handling
 app.use(errorHandler);
 
-// Health check cron job - only if SERVER_URL is set
-if (process.env.SERVER_URL) {
+// 5. Server Startup
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`
+  🚀 RankLeet API is LIVE
+  📡 Port: ${PORT}
+  --------------------------------------------------
+  `);
+
+  const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
+  
   cron.schedule("*/10 * * * *", async () => {
     try {
-      await axios.get(`${process.env.SERVER_URL}/health`, { timeout: 5000 });
+      await axios.get(`${SERVER_URL}/health`);
+      console.log("⚓ Self-ping successful: Server is awake.");
     } catch (err) {
-      console.debug("Health check failed:", err.message);
+      console.error("❌ Self-ping failed:", err.message);
     }
   });
-}
-
-const PORT = process.env.PORT || 5000;
-
-const server = app.listen(PORT, () => {
-  console.log(`[SERVER] Running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-    process.exit(0);
-  });
-});
-
-process.on("SIGINT", () => {
-  console.log("SIGINT signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-    process.exit(0);
-  });
-});
+// Graceful Shutdown
+const shutdown = () => server.close(() => process.exit(0));
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

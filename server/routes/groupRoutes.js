@@ -5,7 +5,7 @@ const protect = require('../middleware/authMiddleware');
 const {
     createGroup,
     joinGroupByLink,
-    getGroupById,
+    getGroupByInviteCode,
     getLeaderboard,
     deleteGroup
 } = require('../controllers/groupController');
@@ -13,8 +13,8 @@ const {
 // Create a new group
 router.post('/create', protect, createGroup);
 router.post("/join/:inviteCode", protect, joinGroupByLink);
-router.get('/:groupId', protect, getGroupById);
-router.get('/:groupId/leaderboard', protect, getLeaderboard);
-router.delete('/:groupId', protect, deleteGroup);
+router.get('/:inviteCode', protect, getGroupByInviteCode); // Simplified
+router.get('/:inviteCode/leaderboard', protect, getLeaderboard); // Standard REST
+router.delete('/:inviteCode', protect, deleteGroup);
 
 module.exports = router;
