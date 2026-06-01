@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
+import { getFrontendUrl } from "../utils/helpers";
 import Navbar from "../components/Navbar";
 import Leaderboard from "../components/Leaderboard";
 
@@ -17,8 +18,7 @@ function Group() {
   const [user, setUser] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const frontendURL =
-    import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+  const frontendURL = getFrontendUrl();
   const inviteLink = `${frontendURL}/join/${inviteCode}`;
 
   const fetchData = async () => {

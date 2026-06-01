@@ -193,6 +193,24 @@ export const parseInviteCode = (input) => {
 };
 
 /**
+ * Get the canonical frontend URL for invite links.
+ * Falls back to window.location.origin and normalizes vercel.com to vercel.app.
+ */
+export const getFrontendUrl = () => {
+  const envUrl = import.meta.env.VITE_FRONTEND_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  const origin = window.location.origin.replace(/\/$/, "");
+  if (origin.endsWith(".vercel.com")) {
+    return origin.replace(/\.vercel\.com$/, ".vercel.app");
+  }
+
+  return origin;
+};
+
+/**
  * Retry function with exponential backoff
  */
 export const retryAsync = async (

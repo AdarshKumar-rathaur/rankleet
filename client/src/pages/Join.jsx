@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
+import { parseInviteCode } from "../utils/helpers";
 
 function Join() {
   const { inviteCode: paramInvite } = useParams();
@@ -22,7 +23,6 @@ function Join() {
     const raw = provided || paramInvite || inputValue;
 
     // Parse possible full URLs to get the code
-    const { parseInviteCode } = await import("../utils/helpers");
     const code = parseInviteCode(raw);
 
     if (!code) {

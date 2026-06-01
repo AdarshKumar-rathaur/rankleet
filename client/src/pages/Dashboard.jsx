@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
+import { parseInviteCode } from "../utils/helpers";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
 
@@ -68,7 +69,6 @@ function Dashboard() {
     setIsJoining(true);
     try {
       // Allow pasting full URL or raw invite code
-      const { parseInviteCode } = await import("../utils/helpers");
       const code = parseInviteCode(inviteCode) || inviteCode;
       if (!code) {
         alert("Please provide a valid invite code or link");
