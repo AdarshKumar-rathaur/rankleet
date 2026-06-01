@@ -56,7 +56,7 @@ const server = app.listen(PORT, () => {
 
   const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
   
-  cron.schedule("0 */5 * ? * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {
     try {
       await axios.get(`${SERVER_URL}/health`);
       console.log("⚓ Self-ping successful: Server is awake.");
