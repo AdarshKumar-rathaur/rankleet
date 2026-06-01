@@ -324,11 +324,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👨‍💻 Author
 
-Created with ❤️ by [Your Name]
+Created with ❤️ by Adarsh Singh
 
 ## 📞 Support & Contact
 
-For support, email support@rankleet.com or open an issue on GitHub.
+For support, open an issue on GitHub.
 
 ## 🙏 Acknowledgments
 

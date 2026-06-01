@@ -33,7 +33,7 @@ app.use(express.json({ limit: "10kb" }));
 app.use(validateBody);
 
 // 2. Health Check
-app.get("/health", (req, res) => {
+app.get(["/health", "/api/health"], (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
@@ -41,6 +41,8 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
+app.use("/api/bounties", require("./routes/bountyRoutes"));
+app.use("/api/ai-activity", require("./routes/aiActivityRoutes"));
 
 // 4. Global Error Handling
 app.use(errorHandler);

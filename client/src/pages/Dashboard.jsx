@@ -3,12 +3,21 @@ import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
 import { parseInviteCode } from "../utils/helpers";
 import Navbar from "../components/Navbar";
+import StatCard from "../components/StatCard";
+import ArenaCard from "../components/ArenaCard";
+import AIActivityFeed from "../components/AIActivityFeed";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "../hooks/useCustomHooks";
 
 function Dashboard() {
-  const [storedProfile, setStoredProfile] = useLocalStorage("rankleet-profile", null);
-  const [storedGroups, setStoredGroups] = useLocalStorage("rankleet-groups", []);
+  const [storedProfile, setStoredProfile] = useLocalStorage(
+    "rankleet-profile",
+    null,
+  );
+  const [storedGroups, setStoredGroups] = useLocalStorage(
+    "rankleet-groups",
+    [],
+  );
 
   const [profile, setProfile] = useState(storedProfile);
   const [groups, setGroups] = useState(storedGroups);
@@ -17,10 +26,14 @@ function Dashboard() {
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [groupError, setGroupError] = useState("");
-  const [loading, setLoading] = useState(!storedProfile && storedGroups.length === 0);
+  const [loading, setLoading] = useState(
+    !storedProfile && storedGroups.length === 0,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+
+  const [aiActivity, setAiActivity] = useState([]);
 
   const navigate = useNavigate();
 
@@ -33,18 +46,29 @@ function Dashboard() {
     }
 
     try {
-      const [profileRes, groupsRes] = await Promise.all([
+      // Added AI Activity Feed fetch to the Promise.all array
+      const [profileRes, groupsRes, aiRes] = await Promise.all([
         cachedGet(API_ENDPOINTS.USERS.PROFILE),
         cachedGet(API_ENDPOINTS.USERS.GROUPS),
+        cachedGet(API_ENDPOINTS.AI_ACTIVITY.GET_FEED).catch(() => ({
+          data: [],
+        })),
       ]);
 
-      const freshProfile = profileRes.data || profileRes.data;
-      const freshGroups = groupsRes.data || groupsRes.data || [];
+      const freshProfile = profileRes.data;
+      const freshGroups = groupsRes.data || [];
+      const rawAiData = aiRes?.data;
+      const freshAiActivity = Array.isArray(rawAiData?.data)
+        ? rawAiData.data
+        : Array.isArray(rawAiData)
+          ? rawAiData
+          : [];
 
       setProfile(freshProfile);
       setStoredProfile(freshProfile);
       setGroups(freshGroups);
       setStoredGroups(freshGroups);
+      setAiActivity(freshAiActivity);
       setGroupError("");
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -64,7 +88,7 @@ function Dashboard() {
   }, []);
 
   const createGroup = async () => {
-    if (isCreating) return; // Prevent double-click
+    if (isCreating) return;
     setIsCreating(true);
     try {
       const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, {
@@ -74,7 +98,6 @@ function Dashboard() {
       setShowCreate(false);
       setGroupName("");
       navigate(`/group/${res.data.inviteCode}`);
-      // invalidate user/groups cache to reflect newly created group
       invalidateCache(API_ENDPOINTS.USERS.GROUPS);
       invalidateCache(API_ENDPOINTS.USERS.PROFILE);
     } catch (err) {
@@ -87,10 +110,9 @@ function Dashboard() {
   };
 
   const joinGroup = async () => {
-    if (isJoining) return; // Prevent double-click
+    if (isJoining) return;
     setIsJoining(true);
     try {
-      // Allow pasting full URL or raw invite code
       const code = parseInviteCode(inviteCode) || inviteCode;
       if (!code) {
         alert("Please provide a valid invite code or link");
@@ -104,7 +126,6 @@ function Dashboard() {
       setShowJoin(false);
       setInviteCode("");
       navigate(`/group/${code}`);
-      // Invalidate caches for groups and this group
       invalidateCache(API_ENDPOINTS.USERS.GROUPS);
       invalidateCache(`/groups/${code}`);
     } catch (err) {
@@ -134,176 +155,253 @@ function Dashboard() {
     );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
+      {/* Animated background gradient */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
       <Navbar />
 
-      <div className="p-8 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Welcome {profile.name}</h1>
-          {isRefreshing && (
-            <span className="text-sm text-gray-300 bg-gray-800 px-3 py-1 rounded-full">
-              Refreshing data...
-            </span>
-          )}
-        </div>
-
-        {/* Stats */}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          <div className="bg-gray-800 p-6 rounded-xl">
-            <p className="text-gray-400">Easy</p>
-            <h2 className="text-2xl text-green-400 font-bold">
-              {profile.stats.easy}
-            </h2>
+      <div className="relative z-10 p-8 max-w-7xl mx-auto">
+        {/* Welcome Section */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Welcome back, {profile.name}!
+              </h1>
+              <p className="text-gray-400">
+                Keep grinding and climbing the ranks 🚀
+              </p>
+            </div>
+            {isRefreshing && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border border-blue-500/30 bg-blue-900/20">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                <span className="text-sm text-blue-300">Syncing...</span>
+              </div>
+            )}
           </div>
 
-          <div className="bg-gray-800 p-6 rounded-xl">
-            <p className="text-gray-400">Medium</p>
-            <h2 className="text-2xl text-yellow-400 font-bold">
-              {profile.stats.medium}
-            </h2>
-          </div>
-
-          <div className="bg-gray-800 p-6 rounded-xl">
-            <p className="text-gray-400">Hard</p>
-            <h2 className="text-2xl text-red-400 font-bold">
-              {profile.stats.hard}
-            </h2>
-          </div>
-
-          <div className="bg-indigo-600 p-6 rounded-xl">
-            <p className="text-gray-200">Score</p>
-            <h2 className="text-2xl font-bold">{profile.stats.score}</h2>
-          </div>
-        </div>
-
-        {/* Groups Section */}
-
-        {groupError && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded text-red-400">
-            {groupError}
-          </div>
-        )}
-
-        <div className="bg-gray-800 p-6 rounded-xl">
-          <div className="flex justify-between mb-6">
-            <h2 className="text-xl font-semibold">Your Groups</h2>
-
-            <div className="space-x-3">
-              <button
-                onClick={() => setShowCreate(true)}
-                className="bg-indigo-500 px-4 py-2 rounded hover:bg-indigo-600"
-              >
-                Create
-              </button>
-
-              <button
-                onClick={() => setShowJoin(true)}
-                className="bg-green-500 px-4 py-2 rounded hover:bg-green-600"
-              >
-                Join
-              </button>
+          {/* Stats Cards with Glassmorphism & Animation */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              difficulty="Easy"
+              count={profile.stats.easy}
+              icon="🟢"
+              color="easy"
+            />
+            <StatCard
+              difficulty="Medium"
+              count={profile.stats.medium}
+              icon="🟡"
+              color="medium"
+            />
+            <StatCard
+              difficulty="Hard"
+              count={profile.stats.hard}
+              icon="🔴"
+              color="hard"
+            />
+            {/* Score Card */}
+            <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-indigo-900/5 shadow-2xl shadow-indigo-500/20 transition-all duration-700 transform scale-100 opacity-100 hover:border-white/20 hover:shadow-2xl">
+              <div className="relative z-10 flex flex-col justify-center h-full">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-3xl">⭐</span>
+                  <h3 className="text-lg font-semibold text-indigo-400">
+                    Rank Score
+                  </h3>
+                </div>
+                <div className="text-4xl font-bold text-white mb-3">
+                  {profile.stats.score}
+                </div>
+                <div className="h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full" />
+              </div>
             </div>
           </div>
+        </div>
 
-          {groups.length === 0 ? (
-            <p className="text-gray-400">No groups yet</p>
-          ) : (
-            <div className="space-y-3">
-              {groups.map((group) => (
-                <div
-                  key={group.inviteCode}
-                  onClick={() => navigate(`/group/${group.inviteCode}`)}
-                  className="bg-gray-700 p-4 rounded cursor-pointer hover:bg-gray-600"
-                >
-                  <p className="font-semibold">{group.name}</p>
-                  <p className="text-sm text-gray-400">
-                    {Array.isArray(group.members) ? group.members.length : 0} members
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Arena & Bounties */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Your Arenas Section */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-1">
+                    🏛️ Your Arenas
+                  </h2>
+                  <p className="text-sm text-gray-400">Join the competition</p>
+                </div>
+                <div className="space-x-3">
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="px-4 py-2 rounded-lg backdrop-blur-md border border-blue-500/30 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+                  >
+                    + Create
+                  </button>
+                  <button
+                    onClick={() => setShowJoin(true)}
+                    className="px-4 py-2 rounded-lg backdrop-blur-md border border-emerald-500/30 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20"
+                  >
+                    + Join
+                  </button>
+                </div>
+              </div>
+
+              {groupError && (
+                <div className="mb-6 p-4 rounded-xl backdrop-blur-md border border-red-500/30 bg-red-900/20 text-red-300 flex items-start gap-3">
+                  <span className="text-xl flex-shrink-0">⚠️</span>
+                  <p>{groupError}</p>
+                </div>
+              )}
+
+              {groups.length === 0 ? (
+                <div className="p-12 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/40 to-gray-900/10 text-center">
+                  <p className="text-3xl mb-3">🎯</p>
+                  <p className="text-gray-400 mb-4">
+                    No arenas yet. Create or join one to get started!
                   </p>
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {groups.map((group) => (
+                    <ArenaCard
+                      key={group.inviteCode}
+                      group={group}
+                      members={group.members}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Bounties Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  ⚡ Bounty Board
+                </h2>
+                <span className="px-3 py-1 rounded-full backdrop-blur-md border border-yellow-500/30 bg-yellow-500/20 text-yellow-300 text-xs font-medium">
+                  Coming Soon
+                </span>
+              </div>
+              <div className="p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/40 to-gray-900/10 text-center">
+                <p className="text-4xl mb-3">🎁</p>
+                <p className="text-gray-400">
+                  Stake points on goals with your team inside the Arenas!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: AI Activity Feed */}
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <h2 className="text-2xl font-bold text-white">🤖 AI Hype Feed</h2>
+              <span className="px-3 py-1 rounded-full backdrop-blur-md border border-purple-500/30 bg-purple-500/20 text-purple-300 text-xs font-medium">
+                Beta
+              </span>
+            </div>
+            <AIActivityFeed feedItems={aiActivity} />
+          </div>
         </div>
       </div>
 
       {/* Create Group Modal */}
-
       {showCreate && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50"
           onClick={() => setShowCreate(false)}
         >
           <div
-            className="bg-gray-800 p-6 rounded-xl w-80"
+            className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl transform transition-all"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl">Create Group</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Create Arena</h2>
               <button
                 onClick={() => setShowCreate(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-2xl"
               >
                 ✕
               </button>
             </div>
 
             <input
-              placeholder="Group name"
-              className="w-full p-2 bg-gray-700 rounded mb-4 text-white"
+              placeholder="Arena name"
+              className="w-full p-3 mb-4 rounded-lg backdrop-blur-md border border-white/10 bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 transition-colors"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
             />
 
             <button
               onClick={createGroup}
-              disabled={isCreating}
-              className="w-full bg-indigo-500 p-2 rounded hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isCreating || !groupName.trim()}
+              className="w-full p-3 rounded-lg backdrop-blur-md border border-blue-500/30 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
             >
-              {isCreating ? "Creating..." : "Create"}
+              {isCreating ? "Creating..." : "Create Arena"}
             </button>
           </div>
         </div>
       )}
 
       {/* Join Group Modal */}
-
       {showJoin && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50"
           onClick={() => setShowJoin(false)}
         >
           <div
-            className="bg-gray-800 p-6 rounded-xl w-80"
+            className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl transform transition-all"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl">Join Group</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Join Arena</h2>
               <button
                 onClick={() => setShowJoin(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-2xl"
               >
                 ✕
               </button>
             </div>
 
             <input
-              placeholder="Invite Code"
-              className="w-full p-2 bg-gray-700 rounded mb-4 text-white"
+              placeholder="Invite code or link"
+              className="w-full p-3 mb-4 rounded-lg backdrop-blur-md border border-white/10 bg-white/5 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500/50 transition-colors"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
             />
 
             <button
               onClick={joinGroup}
-              disabled={isJoining}
-              className="w-full bg-green-500 p-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isJoining || !inviteCode.trim()}
+              className="w-full p-3 rounded-lg backdrop-blur-md border border-emerald-500/30 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
             >
-              {isJoining ? "Joining..." : "Join"}
+              {isJoining ? "Joining..." : "Join Arena"}
             </button>
           </div>
         </div>
       )}
+
+      {/* Add global animation styles */}
+      <style>{`
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slideInLeft {
+          animation: slideInLeft 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

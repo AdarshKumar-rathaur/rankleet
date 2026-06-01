@@ -25,6 +25,21 @@ export const API_ENDPOINTS = {
     DELETE: (id) => `/groups/${id}`,
   },
 
+  // Bounties
+  BOUNTIES: {
+    CREATE: "/bounties/create",
+    GET_BY_GROUP: (groupId) => `/bounties/group/${groupId}`,
+    ACCEPT: (bountyId) => `/bounties/${bountyId}/accept`,
+    CLAIM: (bountyId) => `/bounties/${bountyId}/claim`,
+    DELETE: (bountyId) => `/bounties/${bountyId}`,
+  },
+
+  // AI Activity Feed
+  AI_ACTIVITY: {
+    GET_FEED: "/ai-activity/feed",
+    GET_BY_GROUP: (groupId) => `/ai-activity/group/${groupId}`,
+  },
+
   // Health
   HEALTH: "/health",
 };
