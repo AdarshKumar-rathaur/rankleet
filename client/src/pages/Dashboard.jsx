@@ -4,41 +4,63 @@ import { API_ENDPOINTS } from "../utils/apiConstants";
 import { parseInviteCode } from "../utils/helpers";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
+import { useLocalStorage } from "../hooks/useCustomHooks";
 
 function Dashboard() {
-  const [profile, setProfile] = useState(null);
-  const [groups, setGroups] = useState([]);
+  const [storedProfile, setStoredProfile] = useLocalStorage("rankleet-profile", null);
+  const [storedGroups, setStoredGroups] = useLocalStorage("rankleet-groups", []);
+
+  const [profile, setProfile] = useState(storedProfile);
+  const [groups, setGroups] = useState(storedGroups);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [groupError, setGroupError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!storedProfile && storedGroups.length === 0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
   const navigate = useNavigate();
 
   const fetchData = async () => {
-    setLoading(true);
-    try {
-      const profileRes = await cachedGet(API_ENDPOINTS.USERS.PROFILE);
-      setProfile(profileRes.data || profileRes.data);
+    const hasCache = !!storedProfile || storedGroups.length > 0;
+    if (!hasCache) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
 
-      const groupsRes = await cachedGet(API_ENDPOINTS.USERS.GROUPS);
-      setGroups(groupsRes.data || groupsRes.data || []);
+    try {
+      const [profileRes, groupsRes] = await Promise.all([
+        cachedGet(API_ENDPOINTS.USERS.PROFILE),
+        cachedGet(API_ENDPOINTS.USERS.GROUPS),
+      ]);
+
+      const freshProfile = profileRes.data || profileRes.data;
+      const freshGroups = groupsRes.data || groupsRes.data || [];
+
+      setProfile(freshProfile);
+      setStoredProfile(freshProfile);
+      setGroups(freshGroups);
+      setStoredGroups(freshGroups);
       setGroupError("");
     } catch (err) {
       console.error("Failed to fetch data", err);
-      setGroupError(err.message || "Failed to load dashboard");
-      setProfile(null);
+      const message = err.message || "Failed to load dashboard";
+      setGroupError(hasCache ? `Showing saved data: ${message}` : message);
+      if (!hasCache) {
+        setProfile(null);
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchData(); // or whatever your fetch function is named here
+    fetchData();
   }, []);
 
   const createGroup = async () => {
@@ -116,7 +138,14 @@ function Dashboard() {
       <Navbar />
 
       <div className="p-8 max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Welcome {profile.name}</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Welcome {profile.name}</h1>
+          {isRefreshing && (
+            <span className="text-sm text-gray-300 bg-gray-800 px-3 py-1 rounded-full">
+              Refreshing data...
+            </span>
+          )}
+        </div>
 
         {/* Stats */}
 

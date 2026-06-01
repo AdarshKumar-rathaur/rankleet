@@ -228,7 +228,13 @@ RankLeet/
    - **Start Command**: `npm start`
    - **Node Version**: 18+ (or latest LTS)
 
-4. **Database Setup**
+4. **Keep the app warm on free Render plans**
+   - Render can put free services to sleep after inactivity.
+   - Use the `render.yaml` cron job to ping the backend health check every 4 minutes.
+   - Update `CRON_PING_URL` in `render.yaml` to your actual Render URL, e.g.:
+     `https://your-app-name.onrender.com/health`
+
+5. **Database Setup**
    - Create MongoDB Atlas cluster
    - Whitelist Render IP (0.0.0.0/0) in network access
    - Create database user with read/write permissions

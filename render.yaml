@@ -15,3 +15,11 @@ services:
         generateValue: true
       - key: CLIENT_URL
         sync: false
+
+cronJobs:
+  - name: rankleet-warmup
+    schedule: "*/4 * * * *"
+    command: bash -lc 'curl -fsS "$CRON_PING_URL" || true'
+    envVars:
+      - key: CRON_PING_URL
+        value: https://rankleet.onrender.com/health
