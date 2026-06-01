@@ -163,6 +163,36 @@ export const sleep = (ms = 1000) => {
 };
 
 /**
+ * Parse an invite input which may be a full URL or a raw invite code.
+ * Returns the invite code string or null if none found.
+ */
+export const parseInviteCode = (input) => {
+  if (!input || typeof input !== "string") return null;
+  const trimmed = input.trim();
+
+  // If it contains the join path, extract the portion after /join/
+  const joinIndex = trimmed.indexOf("/join/");
+  if (joinIndex !== -1) {
+    const after = trimmed.slice(joinIndex + 6);
+    const code = after.split(/[/?#]/)[0];
+    return code || null;
+  }
+
+  // Try parsing as URL and take last pathname segment
+  try {
+    const u = new URL(trimmed);
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  } catch (e) {
+    // not a full URL
+  }
+
+  // If it's likely an invite code (alphanumeric-ish, length 4-40), accept it
+  const codeMatch = trimmed.match(/[A-Za-z0-9_-]{4,40}/);
+  return codeMatch ? codeMatch[0] : null;
+};
+
+/**
  * Retry function with exponential backoff
  */
 export const retryAsync = async (

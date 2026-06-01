@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import API from "../services/api";
+import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
@@ -13,17 +13,19 @@ function Dashboard() {
   const [inviteCode, setInviteCode] = useState("");
   const [groupError, setGroupError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   const navigate = useNavigate();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const profileRes = await API.get(API_ENDPOINTS.USERS.PROFILE);
-      setProfile(profileRes.data);
+      const profileRes = await cachedGet(API_ENDPOINTS.USERS.PROFILE);
+      setProfile(profileRes.data || profileRes.data);
 
-      const groupsRes = await API.get(API_ENDPOINTS.USERS.GROUPS);
-      setGroups(groupsRes.data || []);
+      const groupsRes = await cachedGet(API_ENDPOINTS.USERS.GROUPS);
+      setGroups(groupsRes.data || groupsRes.data || []);
       setGroupError("");
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -39,6 +41,8 @@ function Dashboard() {
   }, []);
 
   const createGroup = async () => {
+    if (isCreating) return; // Prevent double-click
+    setIsCreating(true);
     try {
       const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, {
         name: groupName,
@@ -47,23 +51,46 @@ function Dashboard() {
       setShowCreate(false);
       setGroupName("");
       navigate(`/group/${res.data.inviteCode}`);
+      // invalidate user/groups cache to reflect newly created group
+      invalidateCache(API_ENDPOINTS.USERS.GROUPS);
+      invalidateCache(API_ENDPOINTS.USERS.PROFILE);
     } catch (err) {
       alert(err.message || "Error creating group");
       setShowCreate(false);
       setGroupName("");
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const joinGroup = async () => {
+    if (isJoining) return; // Prevent double-click
+    setIsJoining(true);
     try {
-      const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(inviteCode));
+      // Allow pasting full URL or raw invite code
+      const { parseInviteCode } = await import("../utils/helpers");
+      const code = parseInviteCode(inviteCode) || inviteCode;
+      if (!code) {
+        alert("Please provide a valid invite code or link");
+        setShowJoin(false);
+        setInviteCode("");
+        setIsJoining(false);
+        return;
+      }
+
+      const res = await API.post(API_ENDPOINTS.GROUPS.JOIN(code));
       setShowJoin(false);
       setInviteCode("");
-      navigate(`/group/${inviteCode}`);
+      navigate(`/group/${code}`);
+      // Invalidate caches for groups and this group
+      invalidateCache(API_ENDPOINTS.USERS.GROUPS);
+      invalidateCache(`/groups/${code}`);
     } catch (err) {
       alert(err.message || "Invalid invite code");
       setShowJoin(false);
       setInviteCode("");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -201,9 +228,10 @@ function Dashboard() {
 
             <button
               onClick={createGroup}
-              className="w-full bg-indigo-500 p-2 rounded hover:bg-indigo-600"
+              disabled={isCreating}
+              className="w-full bg-indigo-500 p-2 rounded hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create
+              {isCreating ? "Creating..." : "Create"}
             </button>
           </div>
         </div>
@@ -239,9 +267,10 @@ function Dashboard() {
 
             <button
               onClick={joinGroup}
-              className="w-full bg-green-500 p-2 rounded hover:bg-green-600"
+              disabled={isJoining}
+              className="w-full bg-green-500 p-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Join
+              {isJoining ? "Joining..." : "Join"}
             </button>
           </div>
         </div>

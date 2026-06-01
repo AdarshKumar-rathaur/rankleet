@@ -9,12 +9,14 @@ import Join from "./pages/Join";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ToastContainer from "./components/ToastContainer";
+import AuthListener from "./components/AuthListener";
 
 function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-900 text-white">
         <BrowserRouter>
+          <AuthListener />
           <Routes>
             <Route path="/" element={<Login />} />
 

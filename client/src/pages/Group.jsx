@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import API from "../services/api";
+import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
 import Navbar from "../components/Navbar";
 import Leaderboard from "../components/Leaderboard";
@@ -15,6 +15,7 @@ function Group() {
   const [error, setError] = useState("");
   const [group, setGroup] = useState(null);
   const [user, setUser] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const frontendURL =
     import.meta.env.VITE_FRONTEND_URL || window.location.origin;
@@ -32,14 +33,14 @@ function Group() {
       }
 
       // Fetch group details
-      const groupRes = await API.get(API_ENDPOINTS.GROUPS.GET_BY_ID(inviteCode));
-      setGroup(groupRes.data);
+      const groupRes = await cachedGet(API_ENDPOINTS.GROUPS.GET_BY_ID(inviteCode));
+      setGroup(groupRes.data || groupRes.data);
 
-      // Fetch leaderboard
-      const leaderboardRes = await API.get(
+      // Fetch leaderboard (cached)
+      const leaderboardRes = await cachedGet(
         API_ENDPOINTS.GROUPS.LEADERBOARD(inviteCode),
       );
-      setMembers(leaderboardRes.data);
+      setMembers(leaderboardRes.data || leaderboardRes.data);
 
       // Get current user from token (basic parsing)
       const token = localStorage.getItem("token");
@@ -74,12 +75,18 @@ function Group() {
   };
 
   const deleteGroup = async () => {
-    if (!confirm("Delete this group permanently?")) return;
+    if (isDeleting || !confirm("Delete this group permanently?")) return;
+    setIsDeleting(true);
     try {
       await API.delete(API_ENDPOINTS.GROUPS.DELETE(inviteCode));
+      // Invalidate caches related to this group and user groups
+      invalidateCache(`/groups/${inviteCode}`);
+      invalidateCache(API_ENDPOINTS.USERS.GROUPS);
       navigate("/dashboard");
     } catch (err) {
       alert(err.response?.data?.message || "Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -116,9 +123,10 @@ function Group() {
                 {user && group?.createdBy?._id === user._id && (
                   <button
                     onClick={deleteGroup}
-                    className="bg-red-500 px-4 py-1 rounded"
+                    disabled={isDeleting}
+                    className="bg-red-500 px-4 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Delete
+                    {isDeleting ? "Deleting..." : "Delete"}
                   </button>
                 )}
               </div>

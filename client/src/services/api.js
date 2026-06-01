@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getFriendlyErrorMessage, API_ERRORS } from "../utils/apiConstants";
+import { getFriendlyErrorMessage, API_ERRORS, API_ENDPOINTS } from "../utils/apiConstants";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -9,11 +9,45 @@ if (!API_URL) {
 
 const API = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// Simple in-memory cache for GET requests
+const getCache = new Map();
+const DEFAULT_TTL = 30 * 1000; // 30 seconds
+
+const makeCacheKey = (url, config) => {
+  const params = config && config.params ? JSON.stringify(config.params) : "";
+  return `${url}|${params}`;
+};
+
+const cachedGet = async (url, config = {}, ttl = DEFAULT_TTL) => {
+  const key = makeCacheKey(url, config);
+  const entry = getCache.get(key);
+  const now = Date.now();
+  if (entry && now - entry.ts < ttl) {
+    return { data: entry.data, fromCache: true };
+  }
+
+  const res = await API.get(url, config);
+  getCache.set(key, { ts: Date.now(), data: res.data });
+  return { data: res.data, fromCache: false };
+};
+
+const invalidateCache = (urlPrefix) => {
+  if (!urlPrefix) {
+    getCache.clear();
+    return;
+  }
+  for (const key of Array.from(getCache.keys())) {
+    if (key.startsWith(urlPrefix)) {
+      getCache.delete(key);
+    }
+  }
+};
 
 /**
  * Request Interceptor
@@ -78,13 +112,32 @@ API.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    // Handle token expiration
+    // Handle token expiration: remove token but do NOT force a full reload.
+    // Let calling components decide how to handle unauthenticated state.
     if (status === 401) {
+      // Prefer server-provided message for 401 (e.g., invalid credentials)
+      const authMessage = data?.message || API_ERRORS.UNAUTHORIZED;
       localStorage.removeItem("token");
-      window.location.href = "/";
+
+      // Determine if this was a login attempt — if so, don't trigger global redirect
+      const reqUrl = error.config?.url || "";
+      const isLoginAttempt = reqUrl.includes(API_ENDPOINTS.AUTH.LOGIN);
+
+      if (!isLoginAttempt) {
+        // Notify the app that the session is unauthorized so it can redirect gracefully
+        try {
+          window.dispatchEvent(
+            new CustomEvent("app:unauthorized", { detail: { message: authMessage } })
+          );
+        } catch (e) {
+          // ignore if dispatch fails (e.g., non-browser env)
+        }
+      }
+
       return Promise.reject({
         status,
-        message: API_ERRORS.UNAUTHORIZED,
+        message: authMessage,
+        data,
         isAuthError: true,
       });
     }
@@ -109,4 +162,5 @@ API.interceptors.response.use(
   }
 );
 
+export { cachedGet, invalidateCache };
 export default API;

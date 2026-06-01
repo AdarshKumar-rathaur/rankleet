@@ -1,16 +1,24 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import API from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const inviteParam = params.get("invite");
 
   useEffect(() => {
     if (localStorage.getItem("token")) {
-      navigate("/dashboard");
+      // If user already logged in and there's an invite param, go join flow
+      if (inviteParam) {
+        navigate(`/join/${inviteParam}`);
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [navigate]);
+  }, [navigate, inviteParam, location.search]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +53,12 @@ function Login() {
 
       localStorage.setItem("token", res.data.token);
       setError("");
-      navigate("/dashboard");
+      // After login, if user came from an invite, continue join flow
+      if (inviteParam) {
+        navigate(`/join/${inviteParam}`);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
