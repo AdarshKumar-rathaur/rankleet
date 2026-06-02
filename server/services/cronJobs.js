@@ -1,80 +1,139 @@
 const cron = require("node-cron");
-const fetchLeetCodeStats = require("./leetcodeService");
+const { fetchAllUserData } = require("./leetcodeService");
 const calculateScore = require("../utils/scoreCalculator");
+const generateMasteryPath = require("./masteryPathService");
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let cronTask = null;
 let weeklyAITask = null;
+let masteryPathTask = null;
 
 const refreshLeetCodeStats = () => {
-  // Stop existing task if any
-  if (cronTask) {
-    cronTask.stop();
-  }
+  // ── 30-minute stats refresh ──────────────────────────────────────────────
+  if (cronTask) cronTask.stop();
 
   cronTask = cron.schedule("*/30 * * * *", async () => {
-    console.log("[CRON] Refreshing LeetCode stats...");
+    console.log("[CRON] Starting LeetCode stats refresh...");
     try {
       const User = require("../models/User");
       const users = await User.find().lean();
 
-      for (let user of users) {
+      for (const user of users) {
         try {
           if (!user.leetcodeUsername) {
             console.log("[CRON] Skipping user with no leetcodeUsername:", user._id);
             continue;
           }
 
-          const stats = await fetchLeetCodeStats(user.leetcodeUsername);
+          // ONE batched request per user
+          const { stats, contestRating, contestRanking, contestPercentile, submissionCalendar, contestHistory } =
+            await fetchAllUserData(user.leetcodeUsername);
+
           const score = calculateScore(stats.easy, stats.medium, stats.hard);
 
-          await User.updateOne(
-            { _id: user._id },
-            {
-              $set: {
-                stats: {
-                  easy: stats.easy,
-                  medium: stats.medium,
-                  hard: stats.hard,
-                  total: stats.total,
-                  score,
-                },
-                lastUpdated: new Date(),
+          const updateOp = {
+            $set: {
+              stats: {
+                easy: stats.easy,
+                medium: stats.medium,
+                hard: stats.hard,
+                total: stats.total,
+                score,
               },
+              submissionCalendar: submissionCalendar || {},
+              lastUpdated: new Date(),
+            },
+          };
+
+          // Replace full contest history if fetched successfully, otherwise fall back to incremental append
+          if (contestHistory?.length > 0) {
+            updateOp.$set.contestHistory = contestHistory;
+            updateOp.$set.contestRating = contestHistory[contestHistory.length - 1].rating;
+          } else if (contestRating > 0) {
+            const lastEntry = user.contestHistory?.[user.contestHistory.length - 1];
+            const ratingChanged = !lastEntry || lastEntry.rating !== contestRating;
+            if (ratingChanged) {
+              updateOp.$push = {
+                contestHistory: {
+                  rating: contestRating,
+                  date: new Date(),
+                  rank: contestRanking || 0,
+                  percentile: contestPercentile || 0,
+                }
+              };
+              updateOp.$set.contestRating = contestRating;
             }
-          );
+          }
+
+          await User.updateOne({ _id: user._id }, updateOp);
+          console.log("[CRON] Updated:", user.leetcodeUsername);
         } catch (error) {
           console.error("[CRON] Failed updating user:", user.leetcodeUsername, error.message);
         }
+
+        // 1 second delay between users to avoid rate limiting
+        await sleep(1000);
       }
+
       console.log("[CRON] LeetCode stats refresh completed.");
     } catch (error) {
       console.error("[CRON] Critical error:", error.message);
     }
   });
 
-  // Generate weekly AI activities every Monday at 9 AM
-  if (weeklyAITask) {
-    weeklyAITask.stop();
-  }
+  // ── Weekly AI activity — every Monday at 9 AM ────────────────────────────
+  if (weeklyAITask) weeklyAITask.stop();
 
   weeklyAITask = cron.schedule("0 9 * * 1", async () => {
     console.log("[CRON-AI] Generating weekly roast & hype messages...");
     try {
       const Group = require("../models/Group");
+      const AIActivity = require("../models/AIActivity");
       const { generateActivityLogic } = require("../controllers/aiActivityController");
-      
+
       const groups = await Group.find().lean();
       const types = ["roast", "hype", "insight"];
 
-      for (let group of groups) {
+      // Compute the start of this ISO week (Monday 00:00:00 UTC)
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon…
+      const monday = new Date(now);
+      monday.setUTCDate(now.getUTCDate() - ((dayOfWeek + 6) % 7));
+      monday.setUTCHours(0, 0, 0, 0);
+
+      for (const group of groups) {
         try {
+          // Skip if we already generated something for this group this week
+          const existingThisWeek = await AIActivity.findOne({
+            group: group._id,
+            createdAt: { $gte: monday },
+          });
+          if (existingThisWeek) {
+            console.log(`[CRON-AI] Already generated for group ${group.name} this week — skipping`);
+            continue;
+          }
+
           const type = types[Math.floor(Math.random() * types.length)];
           const groupFull = await Group.findById(group._id).populate("members");
-          
+
           if (groupFull && groupFull.members.length > 0) {
-            // Execute the newly separated logic function
             await generateActivityLogic(group._id, type);
             console.log(`[CRON-AI] Generated ${type} for group: ${group.name}`);
+
+            // Keep only 10 most recent per group
+            const oldMessages = await AIActivity.find({ group: group._id })
+              .sort({ createdAt: -1 })
+              .skip(10)
+              .select("_id");
+
+            if (oldMessages.length > 0) {
+              const idsToDelete = oldMessages.map((msg) => msg._id);
+              await AIActivity.deleteMany({ _id: { $in: idsToDelete } });
+              console.log(
+                `[CRON-AI] Cleaned up ${idsToDelete.length} old messages for group ${group.name}`
+              );
+            }
           }
         } catch (error) {
           console.error("[CRON-AI] Failed for group:", group.name, error.message);
@@ -88,6 +147,41 @@ const refreshLeetCodeStats = () => {
   });
 
   console.log("[CRON] Weekly AI task scheduled for Mondays at 9 AM");
+
+  // ── Sunday 10 AM — regenerate mastery paths for all users ────────────────
+  if (masteryPathTask) masteryPathTask.stop();
+
+  masteryPathTask = cron.schedule("0 10 * * 0", async () => {
+    console.log("[CRON-MASTERY] Regenerating mastery paths...");
+    try {
+      const User = require("../models/User");
+      const users = await User.find().lean();
+
+      for (const user of users) {
+        try {
+          if (!user.leetcodeUsername) continue;
+
+          const stats = user.stats || { easy: 0, medium: 0, hard: 0 };
+          // Use empty tags array — masteryPathService handles it gracefully
+          const masteryPath = await generateMasteryPath(stats, []);
+
+          await User.updateOne({ _id: user._id }, { $set: { masteryPath } });
+          console.log(`[CRON-MASTERY] Generated mastery path for: ${user.leetcodeUsername}`);
+        } catch (error) {
+          console.error("[CRON-MASTERY] Failed for user:", user.leetcodeUsername, error.message);
+        }
+
+        // Small delay between users
+        await sleep(500);
+      }
+
+      console.log("[CRON-MASTERY] Mastery path generation completed.");
+    } catch (error) {
+      console.error("[CRON-MASTERY] Critical error:", error.message);
+    }
+  });
+
+  console.log("[CRON] Mastery path task scheduled for Sundays at 10 AM");
 };
 
 module.exports = refreshLeetCodeStats;

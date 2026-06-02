@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 
-export default function StatCard({ difficulty, count, icon, color }) {
+export default function StatCard({ difficulty, count, icon, color, totalCount }) {
   const [animatedCount, setAnimatedCount] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -19,7 +19,7 @@ export default function StatCard({ difficulty, count, icon, color }) {
     return () => clearInterval(interval);
   }, [count]);
 
-  const percentage = count > 0 ? (animatedCount / Math.max(count, 100)) * 100 : 0;
+  const percentage = totalCount > 0 ? (animatedCount / totalCount) * 100 : 0;
   const circumference = 2 * Math.PI * 45; // radius = 45
   const offset = circumference - (percentage / 100) * circumference;
 
@@ -123,4 +123,9 @@ StatCard.propTypes = {
   count: PropTypes.number.isRequired,
   icon: PropTypes.string.isRequired,
   color: PropTypes.oneOf(["easy", "medium", "hard"]).isRequired,
+  totalCount: PropTypes.number,
+};
+
+StatCard.defaultProps = {
+  totalCount: 100,
 };

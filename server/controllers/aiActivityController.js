@@ -4,6 +4,9 @@ const User = require("../models/User");
 const { successResponse, errorResponse } = require("../utils/responseFormatter");
 const { GoogleGenAI } = require('@google/genai');
 
+// Helper function to pause execution during retries
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Generate AI Roast & Hype using LLM
  */
@@ -65,13 +68,34 @@ Keep it under 150 characters.`;
   }
 }
 
-async function callGoogleGemini(apiKey, prompt) {
+/**
+ * Robust caller for Google Gemini with exponential backoff retries for 503/429 spikes
+ */
+async function callGoogleGemini(apiKey, prompt, retries = 3) {
   const ai = new GoogleGenAI({ apiKey });
-  const res = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-  });
-  return res.text.trim();
+  
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+      return res.text.trim();
+    } catch (err) {
+      const status = err.status || (err.error && err.error.code);
+      
+      // Retry if server is unavailable (503) or rate limited (429)
+      if ((status === 503 || status === 429) && attempt < retries - 1) {
+        const waitTime = Math.pow(2, attempt) * 1000; // 1s, then 2s
+        console.warn(`[GEMINI] API warning (${status}). Retrying in ${waitTime}ms... (Attempt ${attempt + 1}/${retries})`);
+        await sleep(waitTime);
+        continue;
+      }
+      
+      // If it's another error or we ran out of retries, bubble up the error to trigger mock fallback
+      throw err;
+    }
+  }
 }
 
 async function callOpenAI(apiKey, prompt) {
@@ -116,16 +140,16 @@ async function callCohere(apiKey, prompt) {
 
 function getMockAIMessage(groupStats, type) {
   const roasts = [
-    `🔥 ${groupStats.groupName}? More like ${groupStats.groupName}... but with problems solved! Keep grinding!`,
-    `Yo, ${groupStats.topPerformer} carrying ${groupStats.groupName} like a true legend. ${groupStats.totalProblems} problems down! 💀`,
+    `🎮 ${groupStats.groupName}? More like ${groupStats.groupName}... but with problems solved! Keep grinding!`,
+    `Yo, ${groupStats.topPerformer} carrying ${groupStats.groupName} like a true legend. ${groupStats.totalProblems} problems down! 🔥`,
   ];
   const hypes = [
-    `🚀 ${groupStats.groupName} is POPPING OFF! ${groupStats.totalProblems} problems solved this week! The momentum is REAL!`,
-    `🔥 SHOUTOUT to ${groupStats.topPerformer} leading the charge with amazing stats!`,
+    `🔥 ${groupStats.groupName} is POPPING OFF! ${groupStats.totalProblems} problems solved this week! The momentum is REAL!`,
+    `🚀 SHOUTOUT to ${groupStats.topPerformer} leading the charge with amazing stats!`,
   ];
   const insights = [
-    `🧠 ${groupStats.groupName} is averaging solid problems per member. Keep it up!`,
-    `📊 ${groupStats.topPerformer} is carrying the team. Time for others to step up!`,
+    `📊 ${groupStats.groupName} is averaging solid problems per member. Keep it up!`,
+    `💡 ${groupStats.topPerformer} is carrying the team. Time for others to step up!`,
   ];
 
   const messages = type === "roast" ? roasts : type === "hype" ? hypes : insights;
@@ -134,11 +158,26 @@ function getMockAIMessage(groupStats, type) {
 
 exports.getActivityFeed = async (req, res) => {
   try {
-    const limit = req.query.limit || 10;
-    const activities = await AIActivity.find()
+    const limit = parseInt(req.query.limit) || 10;
+    // Support both _id and id depending on how your auth middleware attaches the user object
+    const userId = req.user._id || req.user.id; 
+
+    // 1. Fetch the groups the user is a member of
+    const userGroups = await Group.find({ members: userId }).select('_id');
+
+    // 2. Handle empty state: If user is in 0 groups, return empty array immediately
+    if (!userGroups || userGroups.length === 0) {
+      return res.status(200).json(successResponse([], "Activity feed retrieved", 200));
+    }
+
+    // 3. Extract just the ObjectIds from the group results
+    const userGroupIds = userGroups.map(group => group._id);
+
+    // 4. Filter AI activities using the $in operator against the user's groups
+    const activities = await AIActivity.find({ group: { $in: userGroupIds } })
       .populate("group", "name")
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
+      .limit(limit);
 
     res.status(200).json(successResponse(activities, "Activity feed retrieved", 200));
   } catch (err) {
@@ -150,7 +189,7 @@ exports.getActivityFeed = async (req, res) => {
 exports.getActivityByGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.id || req.user._id;
     const limit = req.query.limit || 5;
 
     const group = await Group.findById(groupId);
@@ -219,7 +258,19 @@ exports.generateActivityLogic = async (groupId, type = "hype") => {
 
   await activity.save();
   await activity.populate("group", "name");
-  
+
+  // Keep only the 10 most recent activity logs for this group
+  const allGroupActivities = await AIActivity.find({ group: groupId })
+    .sort({ createdAt: -1 })
+    .skip(10)
+    .select("_id");
+
+  if (allGroupActivities.length > 0) {
+    const idsToDelete = allGroupActivities.map(a => a._id);
+    await AIActivity.deleteMany({ _id: { $in: idsToDelete } });
+    console.log(`[AI-ACTIVITY] Cleaned up ${idsToDelete.length} old activities for group ${groupId}`);
+  }
+
   return activity;
 };
 
@@ -243,7 +294,7 @@ exports.generateWeeklyActivity = async (req, res) => {
 exports.likeActivity = async (req, res) => {
   try {
     const { activityId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.id || req.user._id;
 
     const activity = await AIActivity.findById(activityId);
     if (!activity) {

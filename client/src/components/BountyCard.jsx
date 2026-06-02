@@ -1,8 +1,25 @@
 import PropTypes from "prop-types";
 import { useState } from "react";
 
-export default function BountyCard({ bounty, onAccept, onClaim, isLoading }) {
+/**
+ * Get current user ID from JWT token stored in localStorage
+ */
+function getCurrentUserId() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id || null;
+  } catch {
+    return null;
+  }
+}
+
+export default function BountyCard({ bounty, onAccept, onClaim }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isActing, setIsActing] = useState(false);
+
+  const currentUserId = getCurrentUserId();
 
   const statusColors = {
     active: "border-blue-500/30 bg-blue-900/10",
@@ -11,16 +28,49 @@ export default function BountyCard({ bounty, onAccept, onClaim, isLoading }) {
   };
 
   const statusBadgeColors = {
-    active: "bg-blue-500/20 text-blue-300",
-    completed: "bg-emerald-500/20 text-emerald-300",
-    claimed: "bg-gray-500/20 text-gray-300",
+    active: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+    completed: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+    claimed: "bg-gray-500/20 text-gray-300 border border-gray-500/30",
   };
 
   const status = bounty.claimed ? "claimed" : bounty.completed ? "completed" : "active";
-  const difficultyEmoji = {
-    Easy: "🟢",
-    Medium: "🟡",
-    Hard: "🔴",
+
+  const difficultyEmoji = { Easy: "🟢", Medium: "🟡", Hard: "🔴" };
+
+  // Check if current user has already accepted this bounty
+  const hasAccepted = currentUserId
+    ? (bounty.acceptedBy || []).some(
+        (id) => (typeof id === "object" ? id._id?.toString() : id?.toString()) === currentUserId
+      )
+    : false;
+
+  // Check if current user has already claimed this bounty
+  const hasClaimed = currentUserId
+    ? (bounty.claimedBy || []).some(
+        (id) => (typeof id === "object" ? id._id?.toString() : id?.toString()) === currentUserId
+      )
+    : false;
+
+  const handleAccept = async (e) => {
+    e.stopPropagation();
+    if (isActing) return;
+    setIsActing(true);
+    try {
+      await onAccept?.(bounty._id);
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleClaim = async (e) => {
+    e.stopPropagation();
+    if (isActing) return;
+    setIsActing(true);
+    try {
+      await onClaim?.(bounty._id);
+    } finally {
+      setIsActing(false);
+    }
   };
 
   return (
@@ -30,24 +80,24 @@ export default function BountyCard({ bounty, onAccept, onClaim, isLoading }) {
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0 mr-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{difficultyEmoji[bounty.difficulty]}</span>
+            <span className="text-lg flex-shrink-0">{difficultyEmoji[bounty.difficulty] || "⚡"}</span>
             <h3 className="font-semibold text-white truncate">{bounty.goal}</h3>
           </div>
-          <p className="text-xs text-gray-400">{bounty.description}</p>
+          {bounty.description && (
+            <p className="text-xs text-gray-400 truncate">{bounty.description}</p>
+          )}
         </div>
-        <div
-          className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusBadgeColors[status]}`}
-        >
+        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${statusBadgeColors[status]}`}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
-        </div>
+        </span>
       </div>
 
       {/* Points & Creator */}
-      <div className="flex items-center justify-between text-sm mb-3">
-        <div className="flex items-center gap-1 text-yellow-400">
-          ⭐ <span className="font-bold">{bounty.points}</span> pts
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-1 text-yellow-400 font-bold">
+          ⭐ {bounty.points} pts
         </div>
         <p className="text-xs text-gray-500">by {bounty.createdBy?.name || "Unknown"}</p>
       </div>
@@ -55,51 +105,63 @@ export default function BountyCard({ bounty, onAccept, onClaim, isLoading }) {
       {/* Expanded Details */}
       {showDetails && (
         <div className="border-t border-white/10 pt-3 mt-3 space-y-3">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Details:</p>
-            <p className="text-sm text-gray-300">{bounty.description}</p>
-          </div>
-          <div className="flex gap-2">
-            <p className="text-xs text-gray-400">
-              Created: {new Date(bounty.createdAt).toLocaleDateString()}
-            </p>
+          {bounty.description && (
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Description</p>
+              <p className="text-sm text-gray-300">{bounty.description}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+            <span>Created: {new Date(bounty.createdAt).toLocaleDateString()}</span>
             {bounty.deadline && (
-              <p className="text-xs text-orange-400">
+              <span className="text-orange-400">
                 Due: {new Date(bounty.deadline).toLocaleDateString()}
-              </p>
+              </span>
+            )}
+            {bounty.acceptedBy?.length > 0 && (
+              <span className="text-blue-400">{bounty.acceptedBy.length} accepted</span>
             )}
           </div>
 
           {/* Action Buttons */}
-          {status === "active" && !bounty.claimedBy?.includes(localStorage.getItem("userId")) && (
-            <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
+            {/* Accept: show when active and user hasn't accepted yet */}
+            {status === "active" && !hasAccepted && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAccept?.(bounty._id);
-                }}
-                disabled={isLoading}
-                className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
+                onClick={handleAccept}
+                disabled={isActing}
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
               >
-                {isLoading ? "..." : "Accept Bounty"}
+                {isActing ? "..." : "✋ Accept Bounty"}
               </button>
-            </div>
-          )}
+            )}
 
-          {status === "completed" && !bounty.claimedBy?.includes(localStorage.getItem("userId")) && (
-            <div className="flex gap-2 pt-2">
+            {/* Already accepted badge */}
+            {status === "active" && hasAccepted && (
+              <div className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-blue-300 bg-blue-900/20 border border-blue-500/20 text-center">
+                ✓ Accepted
+              </div>
+            )}
+
+            {/* Claim: show when completed, user accepted it, and hasn't claimed yet */}
+            {status === "completed" && hasAccepted && !hasClaimed && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClaim?.(bounty._id);
-                }}
-                disabled={isLoading}
-                className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
+                onClick={handleClaim}
+                disabled={isActing}
+                className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
               >
-                {isLoading ? "..." : "Claim Reward"}
+                {isActing ? "..." : "🎁 Claim Reward"}
               </button>
-            </div>
-          )}
+            )}
+
+            {/* Already claimed badge */}
+            {hasClaimed && (
+              <div className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-emerald-300 bg-emerald-900/20 border border-emerald-500/20 text-center">
+                ✓ Reward Claimed
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -115,7 +177,8 @@ BountyCard.propTypes = {
     points: PropTypes.number.isRequired,
     completed: PropTypes.bool,
     claimed: PropTypes.bool,
-    claimedBy: PropTypes.arrayOf(PropTypes.string),
+    acceptedBy: PropTypes.array,
+    claimedBy: PropTypes.array,
     createdBy: PropTypes.shape({
       _id: PropTypes.string,
       name: PropTypes.string,
@@ -125,9 +188,4 @@ BountyCard.propTypes = {
   }).isRequired,
   onAccept: PropTypes.func,
   onClaim: PropTypes.func,
-  isLoading: PropTypes.bool,
-};
-
-BountyCard.defaultProps = {
-  isLoading: false,
 };

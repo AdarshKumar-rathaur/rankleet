@@ -10,12 +10,13 @@ const validateRequestBody = (req, res, next) => {
       return next();
     }
 
-    // Check if request has body for POST/PUT/PATCH
-    // Skip strict validation for join route (invite code in URL)
-    const isJoinRoute = req.originalUrl && req.originalUrl.includes("/join/");
+    const url = req.originalUrl || "";
 
-    if (isJoinRoute) {
-      // Allow join route to proceed even if body is missing or empty
+    // Routes that legitimately send no body — skip empty-body check
+    const noBodyRoutes = ["/join/", "/accept", "/claim", "/refresh"];
+    const isNoBodyRoute = noBodyRoutes.some((r) => url.includes(r));
+
+    if (isNoBodyRoute) {
       return next();
     }
 

@@ -11,7 +11,7 @@ const { successResponse, errorResponse } = require("../utils/responseFormatter")
 exports.createBounty = async (req, res) => {
   try {
     const { groupId, goal, description, difficulty, points, deadline } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Validate input
     if (!groupId || !goal || !points || points < 1) {
@@ -51,7 +51,7 @@ exports.createBounty = async (req, res) => {
 exports.getBountiesByGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Check if user is part of the group
     const group = await Group.findById(groupId);
@@ -79,7 +79,7 @@ exports.getBountiesByGroup = async (req, res) => {
 exports.acceptBounty = async (req, res) => {
   try {
     const { bountyId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const bounty = await Bounty.findById(bountyId);
     if (!bounty) {
@@ -107,7 +107,7 @@ exports.acceptBounty = async (req, res) => {
 exports.claimBounty = async (req, res) => {
   try {
     const { bountyId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const bounty = await Bounty.findById(bountyId);
     if (!bounty) {
@@ -134,10 +134,10 @@ exports.claimBounty = async (req, res) => {
     bounty.claimed = true;
     bounty.claimedAt = new Date();
 
-    // Add points to user's score
+    // Add points to user's bountyPoints (decoupled from stats.score)
     const user = await User.findById(userId);
     if (user) {
-      user.stats.score = (user.stats.score || 0) + bounty.points;
+      user.bountyPoints = (user.bountyPoints || 0) + bounty.points;
       await user.save();
     }
 
@@ -156,7 +156,7 @@ exports.claimBounty = async (req, res) => {
 exports.deleteBounty = async (req, res) => {
   try {
     const { bountyId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const bounty = await Bounty.findById(bountyId);
     if (!bounty) {

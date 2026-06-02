@@ -14,6 +14,9 @@ export const API_ENDPOINTS = {
   USERS: {
     PROFILE: "/users/profile",
     GROUPS: "/users/groups",
+    LEETCODE_TOTALS: "/users/leetcode-totals",
+    REFRESH: "/users/refresh",
+    MASTERY: "/users/profile", // mastery path is part of profile
   },
 
   // Groups
@@ -34,10 +37,12 @@ export const API_ENDPOINTS = {
     DELETE: (bountyId) => `/bounties/${bountyId}`,
   },
 
-  // AI Activity Feed
+  // AI Activity
   AI_ACTIVITY: {
     GET_FEED: "/ai-activity/feed",
     GET_BY_GROUP: (groupId) => `/ai-activity/group/${groupId}`,
+    GENERATE: (groupId) => `/ai-activity/generate-weekly/${groupId}`,
+    LIKE: (activityId) => `/ai-activity/${activityId}/like`,
   },
 
   // Health

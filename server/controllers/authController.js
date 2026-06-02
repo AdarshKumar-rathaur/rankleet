@@ -2,6 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
+const fetchLeetCodeStats = require("../services/leetcodeService");
+const calculateScore = require("../utils/scoreCalculator");
+const fetchRecentSubmissionTags = require("../services/leetcodeTagsService");
+const generateMasteryPath = require("../services/masteryPathService");
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -55,6 +59,47 @@ exports.registerUser = async (req, res) => {
       name: user.name,
       email: user.email,
       token: generateToken(user._id)
+    });
+
+    // Fire-and-forget: fetch initial stats + calendar + mastery path for new user
+    setImmediate(async () => {
+      try {
+        const { fetchAllUserData } = require("../services/leetcodeService");
+
+        const { stats, contestRating, contestRanking, contestPercentile, submissionCalendar } =
+          await fetchAllUserData(user.leetcodeUsername);
+
+        const score = calculateScore(stats.easy, stats.medium, stats.hard);
+        const tags = await fetchRecentSubmissionTags(user.leetcodeUsername);
+        const masteryPath = await generateMasteryPath(stats, tags);
+
+        const updateOp = {
+          $set: {
+            stats: { easy: stats.easy, medium: stats.medium, hard: stats.hard, total: stats.total, score },
+            submissionCalendar,
+            masteryPath,
+            lastUpdated: new Date(),
+          },
+        };
+
+        // Seed first contest history entry if user has a rating
+        if (contestRating > 0) {
+          updateOp.$set.contestRating = contestRating;
+          updateOp.$push = {
+            contestHistory: {
+              rating: contestRating,
+              date: new Date(),
+              rank: contestRanking || 0,
+              percentile: contestPercentile || 0,
+            }
+          };
+        }
+
+        await User.updateOne({ _id: user._id }, updateOp);
+        console.log("[REGISTER] Initial data populated for:", user.leetcodeUsername);
+      } catch (err) {
+        console.error("[REGISTER] Initial setup failed:", err.message);
+      }
     });
   } catch (error) {
     console.error("AUTH ERROR:", error.message);

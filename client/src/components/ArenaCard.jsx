@@ -1,6 +1,14 @@
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 
+/** Returns initials (up to 2 chars) from a name string */
+function getInitials(name) {
+  if (!name || typeof name !== "string") return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 export default function ArenaCard({ group, members }) {
   const navigate = useNavigate();
 
@@ -51,7 +59,7 @@ export default function ArenaCard({ group, members }) {
             {group.name}
           </h3>
           <p className="text-xs text-gray-400">
-            {displayedMembers.length} {displayedMembers.length === 1 ? "fighter" : "fighters"}
+            {`${members?.length || 0} ${(members?.length || 0) === 1 ? "fighter" : "fighters"}`}
           </p>
         </div>
 
@@ -61,9 +69,9 @@ export default function ArenaCard({ group, members }) {
             <div
               key={member._id || index}
               className={`w-8 h-8 rounded-full ${getAvatarColor(index)} border-2 border-gray-900 flex items-center justify-center text-white text-xs font-semibold shadow-lg hover:scale-110 transition-transform`}
-              title={member.name}
+              title={member.name || "Member"}
             >
-              {member.name?.charAt(0).toUpperCase() || "?"}
+              {getInitials(member.name)}
             </div>
           ))}
           {additionalCount > 0 && (

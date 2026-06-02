@@ -52,4 +52,10 @@ const aiActivitySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// TTL index to auto-delete documents older than 28 days
+aiActivitySchema.index({ createdAt: 1 }, { expireAfterSeconds: 28 * 24 * 60 * 60 });
+
+// NEW: Compound index to speed up dashboard feed queries for specific groups
+aiActivitySchema.index({ group: 1, createdAt: -1 }); 
+
 module.exports = mongoose.model("AIActivity", aiActivitySchema);

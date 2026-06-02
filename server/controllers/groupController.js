@@ -45,8 +45,12 @@ exports.joinGroupByLink = async (req, res) => {
       });
     }
 
-    group.members.push(req.user._id);
-    await group.save();
+    // Use atomic $addToSet to prevent race conditions and duplicate adds
+    const updatedGroup = await Group.findByIdAndUpdate(
+      group._id,
+      { $addToSet: { members: req.user._id } },
+      { new: true }
+    );
 
     res.json({
       message: "Joined group successfully",
@@ -69,7 +73,7 @@ exports.getGroupByInviteCode = async (req, res) => {
     }
 
     const group = await Group.findOne({ inviteCode: inviteCode.trim() })
-      .populate("members", "name leetcodeUsername stats")
+      .populate("members", "name leetcodeUsername stats contestRating bountyPoints")
       .populate("createdBy", "_id");
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
@@ -102,7 +106,7 @@ exports.getLeaderboard = async (req, res) => {
 
     const group = await Group.findOne({ inviteCode: inviteCode.trim() }).populate(
       "members",
-      "name leetcodeUsername stats",
+      "name leetcodeUsername stats contestRating bountyPoints",
     );
     if (!group) {
       return res.status(404).json({ message: "Group not found" });

@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Group from "./pages/Group";
 import Join from "./pages/Join";
+import Mastery from "./pages/Mastery";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -20,7 +21,7 @@ function App() {
     const pingServer = async () => {
       try {
         await fetch(`${apiUrl}/health`, { method: "GET", cache: "no-store" });
-      } catch (error) {
+      } catch {
         // Ignore ping failures; this is just a keepalive.
       }
     };
@@ -51,7 +52,16 @@ function App() {
             />
 
             <Route
-              path="/group/:inviteCode" // Changed from :groupId to :inviteCode
+              path="/mastery"
+              element={
+                <ProtectedRoute>
+                  <Mastery />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/group/:inviteCode"
               element={
                 <ProtectedRoute>
                   <Group />

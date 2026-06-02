@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     leetcodeUsername: {
       type: String,
       required: true,
+      index: true, // Index for frequently queried cron jobs
     },
     stats: {
       easy: {
@@ -39,7 +40,36 @@ const userSchema = new mongoose.Schema(
       score: {
         type: Number,
         default: 0,
+        index: true, // Index for leaderboard sorting
       },
+    },
+    contestRating: {
+      type: Number,
+      default: 0,
+    },
+    // Historical contest rating tracking
+    contestHistory: [
+      {
+        rating: Number,
+        date: Date,
+        rank: Number,
+        percentile: Number,
+        title: String,
+      },
+    ],
+    bountyPoints: {
+      type: Number,
+      default: 0,
+    },
+    masteryPath: {
+      type: Object,
+      default: null,
+    },
+    // Daily submission calendar for heatmap (YYYY-MM-DD: count)
+    submissionCalendar: {
+      type: Map,
+      of: Number,
+      default: new Map(),
     },
     lastUpdated: {
       type: Date,
@@ -47,5 +77,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+// Compound index for leaderboard sorting by score (descending)
+userSchema.index({ "stats.score": -1 });
 
 module.exports = mongoose.model("User", userSchema);
