@@ -1,8 +1,11 @@
 const AIActivity = require("../models/AIActivity");
 const Group = require("../models/Group");
 const User = require("../models/User");
-const { successResponse, errorResponse } = require("../utils/responseFormatter");
-const { GoogleGenAI } = require('@google/genai');
+const {
+  successResponse,
+  errorResponse,
+} = require("../utils/responseFormatter");
+const { GoogleGenAI } = require("@google/genai");
 
 // Helper function to pause execution during retries
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -73,25 +76,27 @@ Keep it under 150 characters.`;
  */
 async function callGoogleGemini(apiKey, prompt, retries = 3) {
   const ai = new GoogleGenAI({ apiKey });
-  
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const res = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: "gemini-2.5-flash",
         contents: prompt,
       });
       return res.text.trim();
     } catch (err) {
       const status = err.status || (err.error && err.error.code);
-      
+
       // Retry if server is unavailable (503) or rate limited (429)
       if ((status === 503 || status === 429) && attempt < retries - 1) {
         const waitTime = Math.pow(2, attempt) * 1000; // 1s, then 2s
-        console.warn(`[GEMINI] API warning (${status}). Retrying in ${waitTime}ms... (Attempt ${attempt + 1}/${retries})`);
+        console.warn(
+          `[GEMINI] API warning (${status}). Retrying in ${waitTime}ms... (Attempt ${attempt + 1}/${retries})`,
+        );
         await sleep(waitTime);
         continue;
       }
-      
+
       // If it's another error or we ran out of retries, bubble up the error to trigger mock fallback
       throw err;
     }
@@ -100,41 +105,53 @@ async function callGoogleGemini(apiKey, prompt, retries = 3) {
 
 async function callOpenAI(apiKey, prompt) {
   const axios = require("axios");
-  const res = await axios.post("https://api.openai.com/v1/chat/completions", {
-    model: "gpt-3.5-turbo",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.7,
-    max_tokens: 200,
-  }, {
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+  const res = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 200,
     },
-  });
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
   return res.data.choices[0].message.content.trim();
 }
 
 async function callAnthropic(apiKey, prompt) {
   const axios = require("axios");
-  const res = await axios.post("https://api.anthropic.com/v1/messages", {
-    model: "claude-3-haiku-20240307",
-    max_tokens: 200,
-    messages: [{ role: "user", content: prompt }],
-  }, {
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-  });
+  const res = await axios.post(
+    "https://api.anthropic.com/v1/messages",
+    {
+      model: "claude-3-haiku-20240307",
+      max_tokens: 200,
+      messages: [{ role: "user", content: prompt }],
+    },
+    {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    },
+  );
   return res.data.content[0].text.trim();
 }
 
 async function callCohere(apiKey, prompt) {
   const axios = require("axios");
-  const res = await axios.post("https://api.cohere.ai/v1/generate", {
-    prompt: prompt,
-    max_tokens: 200,
-    temperature: 0.7,
-  }, {
-    headers: { "Authorization": `Bearer ${apiKey}` },
-  });
+  const res = await axios.post(
+    "https://api.cohere.ai/v1/generate",
+    {
+      prompt: prompt,
+      max_tokens: 200,
+      temperature: 0.7,
+    },
+    {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    },
+  );
   return res.data.generations[0].text.trim();
 }
 
@@ -152,7 +169,8 @@ function getMockAIMessage(groupStats, type) {
     `💡 ${groupStats.topPerformer} is carrying the team. Time for others to step up!`,
   ];
 
-  const messages = type === "roast" ? roasts : type === "hype" ? hypes : insights;
+  const messages =
+    type === "roast" ? roasts : type === "hype" ? hypes : insights;
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
@@ -160,18 +178,20 @@ exports.getActivityFeed = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     // Support both _id and id depending on how your auth middleware attaches the user object
-    const userId = req.user._id || req.user.id; 
+    const userId = req.user._id || req.user.id;
 
     // 1. Fetch the groups the user is a member of
-    const userGroups = await Group.find({ members: userId }).select('_id');
+    const userGroups = await Group.find({ members: userId }).select("_id");
 
     // 2. Handle empty state: If user is in 0 groups, return empty array immediately
     if (!userGroups || userGroups.length === 0) {
-      return res.status(200).json(successResponse([], "Activity feed retrieved", 200));
+      return res
+        .status(200)
+        .json(successResponse([], "Activity feed retrieved", 200));
     }
 
     // 3. Extract just the ObjectIds from the group results
-    const userGroupIds = userGroups.map(group => group._id);
+    const userGroupIds = userGroups.map((group) => group._id);
 
     // 4. Filter AI activities using the $in operator against the user's groups
     const activities = await AIActivity.find({ group: { $in: userGroupIds } })
@@ -179,10 +199,14 @@ exports.getActivityFeed = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit);
 
-    res.status(200).json(successResponse(activities, "Activity feed retrieved", 200));
+    res
+      .status(200)
+      .json(successResponse(activities, "Activity feed retrieved", 200));
   } catch (err) {
     console.error("Feed Error:", err);
-    res.status(500).json(errorResponse(err.message || "Failed to fetch feed", 500));
+    res
+      .status(500)
+      .json(errorResponse(err.message || "Failed to fetch feed", 500));
   }
 };
 
@@ -194,7 +218,9 @@ exports.getActivityByGroup = async (req, res) => {
 
     const group = await Group.findById(groupId);
     if (!group || !group.members.includes(userId)) {
-      return res.status(403).json(errorResponse("Not a member of this group", 403));
+      return res
+        .status(403)
+        .json(errorResponse("Not a member of this group", 403));
     }
 
     const activities = await AIActivity.find({ group: groupId })
@@ -202,10 +228,16 @@ exports.getActivityByGroup = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
 
-    res.status(200).json(successResponse(activities, "Group activities retrieved", 200));
+    res
+      .status(200)
+      .json(successResponse(activities, "Group activities retrieved", 200));
   } catch (err) {
     console.error("Group Activity Error:", err);
-    res.status(500).json(errorResponse(err.message || "Failed to fetch group activity", 500));
+    res
+      .status(500)
+      .json(
+        errorResponse(err.message || "Failed to fetch group activity", 500),
+      );
   }
 };
 
@@ -234,7 +266,7 @@ exports.generateActivityLogic = async (groupId, type = "hype") => {
         topPerformer = member.name;
       }
       return { name: member.name, solved, points };
-    })
+    }),
   );
 
   const groupStats = {
@@ -253,7 +285,10 @@ exports.generateActivityLogic = async (groupId, type = "hype") => {
     content: aiContent,
     group: groupId,
     generatedFrom: { weeklyStats: groupStats },
-    aiModel: process.env.LLM_PROVIDER === 'google' ? 'gemini-2.5-flash' : (process.env.LLM_PROVIDER || "gpt-3.5-turbo"),
+    aiModel:
+      process.env.LLM_PROVIDER === "google"
+        ? "gemini-2.5-flash"
+        : process.env.LLM_PROVIDER || "gpt-3.5-turbo",
   });
 
   await activity.save();
@@ -266,9 +301,11 @@ exports.generateActivityLogic = async (groupId, type = "hype") => {
     .select("_id");
 
   if (allGroupActivities.length > 0) {
-    const idsToDelete = allGroupActivities.map(a => a._id);
+    const idsToDelete = allGroupActivities.map((a) => a._id);
     await AIActivity.deleteMany({ _id: { $in: idsToDelete } });
-    console.log(`[AI-ACTIVITY] Cleaned up ${idsToDelete.length} old activities for group ${groupId}`);
+    console.log(
+      `[AI-ACTIVITY] Cleaned up ${idsToDelete.length} old activities for group ${groupId}`,
+    );
   }
 
   return activity;
@@ -311,5 +348,15 @@ exports.likeActivity = async (req, res) => {
   } catch (err) {
     console.error("Like Error:", err);
     res.status(500).json(errorResponse(err.message || "Failed to like activity", 500));
+  }
+};
+
+exports.deleteActivityOfGroup = async (groupId) => {
+  try {
+    await AIActivity.deleteMany({ group: groupId });
+    return successResponse(null, "Activities deleted", 200);
+  } catch (err) {
+    console.error("Delete Activity Error:", err);
+    return errorResponse(err.message || "Failed to delete activities", 500);
   }
 };

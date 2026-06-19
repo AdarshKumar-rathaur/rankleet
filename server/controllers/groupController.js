@@ -152,7 +152,8 @@ exports.deleteGroup = async (req, res) => {
         .status(403)
         .json({ message: "Only group creator can delete the group" });
     }
-
+    const {deleteActivityOfGroup} = require("./aiActivityController");
+    let r = await deleteActivityOfGroup(group._id); // Delete associated activities
     await Group.findByIdAndDelete(group._id);
     res.status(200).json({ message: "Group deleted successfully" });
   } catch (error) {
