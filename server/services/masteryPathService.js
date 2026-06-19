@@ -1,14 +1,16 @@
 const { GoogleGenAI } = require("@google/genai");
+const fetchRecentSubmissionTags = require("./leetcodeTagsService");
 
 /**
  * Generate a mastery path for a user based on their stats and recent tags.
  * Uses Gemini if LLM_API_KEY is set, otherwise returns a smart mock.
  * Always returns a valid non-null object.
  */
-const generateMasteryPath = async (stats = {}, tags = []) => {
+const generateMasteryPath = async (userName = "", stats = {}, tags = []) => {
   const easy = stats.easy || 0;
   const medium = stats.medium || 0;
   const hard = stats.hard || 0;
+  const total = easy + medium + hard;
 
   try {
     const apiKey = process.env.LLM_API_KEY;
@@ -16,41 +18,44 @@ const generateMasteryPath = async (stats = {}, tags = []) => {
       console.log("[MASTERY] LLM_API_KEY not set, using smart mock");
       return buildMockMasteryPath(easy, medium, hard, tags);
     }
-
+    if(!tags){
+      tags = await fetchRecentSubmissionTags(userName) || [];
+    }
     const tagList = Array.isArray(tags) && tags.length > 0
       ? tags.slice(0, 10).join(", ")
       : "arrays, strings, dynamic programming";
 
     const hardRatio  = (easy + medium + hard) > 0 ? (hard / (easy + medium + hard) * 100).toFixed(0) : 0;
     const medRatio   = (easy + medium + hard) > 0 ? (medium / (easy + medium + hard) * 100).toFixed(0) : 0;
+    const easyRatio = 100 - medRatio - hardRatio;
 
-    const prompt = `You are a competitive programming coach. Generate a HIGHLY PERSONALIZED 30-day LeetCode mastery plan for this specific user.
+    const prompt = `You are an elite competitive programming coach. Your task is to generate a HIGHLY PERSONALIZED 30-day LeetCode mastery plan for a specific student.
 
 USER STATS:
-- Easy solved: ${easy} (${100 - medRatio - hardRatio}% of total)
+- Easy solved: ${easy} (${easyRatio}% of total)
 - Medium solved: ${medium} (${medRatio}% of total)  
 - Hard solved: ${hard} (${hardRatio}% of total)
-- Total problems: ${easy + medium + hard}
+- Total problems: ${total}
 - Recent topics they've been working on: ${tagList}
 
-PERSONALIZATION REQUIREMENTS:
-1. If hard% < 10%, focus on bridging easy→medium→hard gap
-2. Explicitly reference their recent topics (${tagList}) — suggest building on strengths OR filling gaps
-3. Title must reflect their specific situation (NOT generic like "30-Day Plan")
-4. Each step description must mention their actual numbers
-5. Topics to cover should AVOID what they already do well (${tagList}) and instead target gaps
+COACHING DIRECTIVES:
+1. Progression Logic: If the student's Hard solve rate is < 10%, the primary focus MUST be bridging the gap from Medium to Hard problem-solving patterns.
+2. Topic Strategy: Acknowledge their recent focus on [${tagList}] in the description, but strictly assign NEW or WEAK topics in the "steps" to fill their knowledge gaps. Avoid assigning topics they have already heavily practiced.
+3. Customization: The "title" and step "descriptions" MUST dynamically reference the student's actual problem counts and ratios. No generic advice.
 
-Return ONLY valid JSON (no markdown, no code fences) in this exact format:
+OUTPUT FORMAT:
+Return ONLY a raw, valid JSON object. Do NOT wrap the JSON in markdown code blocks, backticks, or add any conversational text. Use this exact schema:
+
 {
-  "title": "string (specific to this user, e.g. 'Graph & DP Mastery for ${easy + medium + hard}-Problem Solver')",
-  "description": "string (2 sentences mentioning their specific stats and recent topics)",
+  "title": "string (e.g., 'Advanced Graph & DP Mastery for ${total}-Problem Solver')",
+  "description": "string (Exactly 2 sentences. Must explicitly mention their stats and recent work in ${tagList})",
   "level": "beginner|intermediate|advanced",
   "steps": [
     {
-      "day": number,
-      "title": "string",
-      "description": "string (mention why THIS user needs this step based on their stats/recent work)",
-      "topics": ["string"]
+      "day": number (Must be the starting day of the phase: 1, 7, 13, 19, or 25),
+      "title": "string (Actionable phase title)",
+      "description": "string (Explain exactly why THIS specific student needs this phase based on their profile)",
+      "topics": ["string", "string"]
     }
   ]
 }

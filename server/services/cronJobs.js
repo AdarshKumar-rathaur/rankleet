@@ -162,8 +162,9 @@ const refreshLeetCodeStats = () => {
           if (!user.leetcodeUsername) continue;
 
           const stats = user.stats || { easy: 0, medium: 0, hard: 0 };
+          const userName = user.leetcodeUsername || "";
           // Use empty tags array — masteryPathService handles it gracefully
-          const masteryPath = await generateMasteryPath(stats, []);
+          const masteryPath = await generateMasteryPath(userName, stats, []);
 
           await User.updateOne({ _id: user._id }, { $set: { masteryPath } });
           console.log(`[CRON-MASTERY] Generated mastery path for: ${user.leetcodeUsername}`);

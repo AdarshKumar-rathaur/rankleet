@@ -178,7 +178,7 @@ exports.refreshUserData = async (req, res) => {
     if (!user.masteryPath || forceMastery) {
       try {
         const tags = await fetchRecentSubmissionTags(user.leetcodeUsername);
-        const masteryPath = await generateMasteryPath(freshStats, tags);
+        const masteryPath = await generateMasteryPath(user.leetcodeUsername, freshStats, tags);
         updateOp.$set.masteryPath = masteryPath;
         console.log("[REFRESH] Mastery path regenerated for", user.leetcodeUsername, "| level:", masteryPath.level);
       } catch (mpErr) {
