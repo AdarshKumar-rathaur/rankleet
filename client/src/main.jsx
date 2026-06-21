@@ -9,30 +9,41 @@ try {
   validateClientEnv()
 } catch (error) {
   console.error('Environment validation failed:', error.message)
-  document.getElementById('root').innerHTML = `
-    <div style="
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #1a1a2e;
-      color: #fff;
-      font-family: system-ui, -apple-system, sans-serif;
-    ">
-      <div style="
-        padding: 2rem;
-        background: #16213e;
-        border-left: 4px solid #e94560;
-        border-radius: 8px;
-        max-width: 500px;
-      ">
-        <h1 style="margin: 0 0 1rem 0; color: #e94560;">Configuration Error</h1>
-        <p style="margin: 0; color: #aaa; line-height: 1.6;">${error.message}</p>
-        <p style="margin: 1rem 0 0 0; color: #666; font-size: 0.9rem;">Please check your .env.local file and try again.</p>
-      </div>
-    </div>
-  `
-  throw error
+  const rootEl = document.getElementById('root')
+  if (rootEl) {
+    // Create error div safely without using innerHTML
+    const errorDiv = document.createElement('div')
+    errorDiv.style.display = 'flex'
+    errorDiv.style.alignItems = 'center'
+    errorDiv.style.justifyContent = 'center'
+    errorDiv.style.height = '100vh'
+    errorDiv.style.background = '#1a1a2e'
+    errorDiv.style.color = '#fff'
+    errorDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif'
+    
+    const containerDiv = document.createElement('div')
+    containerDiv.style.padding = '2rem'
+    containerDiv.style.background = '#16213e'
+    containerDiv.style.borderLeft = '4px solid #e94560'
+    containerDiv.style.borderRadius = '8px'
+    containerDiv.style.maxWidth = '500px'
+    
+    const h1El = document.createElement('h1')
+    h1El.style.margin = '0 0 1rem 0'
+    h1El.style.color = '#e94560'
+    h1El.textContent = 'Configuration Error'
+    
+    const pEl = document.createElement('p')
+    pEl.style.margin = '0'
+    pEl.style.color = '#aaa'
+    pEl.style.lineHeight = '1.6'
+    pEl.textContent = error.message
+    
+    containerDiv.appendChild(h1El)
+    containerDiv.appendChild(pEl)
+    errorDiv.appendChild(containerDiv)
+    rootEl.appendChild(errorDiv)
+  }
 }
 
 createRoot(document.getElementById('root')).render(

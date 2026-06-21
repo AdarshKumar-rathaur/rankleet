@@ -42,6 +42,12 @@ export default function StatCard({ difficulty, count, icon, color, totalCount })
       bg: "from-red-900/20 to-red-900/5",
       text: "text-red-400",
     },
+    total: {
+      ring: "stroke-blue-500",
+      glow: "shadow-blue-500/50",
+      bg: "from-blue-900/20 to-blue-900/5",
+      text: "text-blue-400",
+    },
   };
 
   const colors = colorMap[color] || colorMap.easy;

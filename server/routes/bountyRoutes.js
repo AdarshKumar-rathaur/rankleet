@@ -5,9 +5,8 @@ const protect = require("../middleware/authMiddleware");
 const {
   createBounty,
   getBountiesByGroup,
-  acceptBounty,
-  claimBounty,
-  deleteBounty,
+  joinBounty,
+  resolveBounties,
 } = require("../controllers/bountyController");
 
 /**
@@ -15,19 +14,9 @@ const {
  * Prefix: /bounties
  */
 
-// Create a new bounty
 router.post("/create", protect, createBounty);
-
-// Get all bounties for a group
 router.get("/group/:groupId", protect, getBountiesByGroup);
-
-// Accept a bounty
-router.post("/:bountyId/accept", protect, acceptBounty);
-
-// Claim/Complete a bounty
-router.post("/:bountyId/claim", protect, claimBounty);
-
-// Delete a bounty
-router.delete("/:bountyId", protect, deleteBounty);
+router.post("/:id/join", protect, joinBounty);
+router.post("/resolve", resolveBounties);
 
 module.exports = router;

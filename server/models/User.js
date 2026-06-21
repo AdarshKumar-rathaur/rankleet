@@ -61,6 +61,32 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastRewardedStats: {
+      easy: {
+        type: Number,
+        default: 0,
+      },
+      medium: {
+        type: Number,
+        default: 0,
+      },
+      hard: {
+        type: Number,
+        default: 0,
+      },
+      total: {
+        type: Number,
+        default: 0,
+      },
+      contestRating: {
+        type: Number,
+        default: 0,
+      },
+      contestHistoryCount: {
+        type: Number,
+        default: 0,
+      },
+    },
     masteryPath: {
       type: Object,
       default: null,

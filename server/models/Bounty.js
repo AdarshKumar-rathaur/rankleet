@@ -1,5 +1,43 @@
 const mongoose = require("mongoose");
 
+const bountyParticipantSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    wager: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    startingStats: {
+      easy: {
+        type: Number,
+        default: 0,
+      },
+      medium: {
+        type: Number,
+        default: 0,
+      },
+      hard: {
+        type: Number,
+        default: 0,
+      },
+      total: {
+        type: Number,
+        default: 0,
+      },
+    },
+    completed: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const bountySchema = new mongoose.Schema(
   {
     group: {
@@ -7,68 +45,35 @@ const bountySchema = new mongoose.Schema(
       ref: "Group",
       required: true,
     },
-    goal: {
+    title: {
       type: String,
       required: true,
-      // e.g., "Solve 10 Medium LeetCode problems"
     },
-    description: {
+    objectiveType: {
       type: String,
-      default: "",
+      enum: ["EASY", "MEDIUM", "HARD", "TOTAL"],
+      required: true,
     },
-    difficulty: {
-      type: String,
-      enum: ["Easy", "Medium", "Hard"],
-      default: "Medium",
-    },
-    points: {
+    targetAmount: {
       type: Number,
       required: true,
       min: 1,
-      // Virtual points staked on this bounty
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    acceptedBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    completed: {
-      type: Boolean,
-      default: false,
-      // Mark when the goal is achieved
-    },
-    completedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      // Which user completed this bounty
-    },
-    completedAt: {
-      type: Date,
-    },
-    claimedBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        // Users who claimed the reward
-      },
-    ],
-    claimed: {
-      type: Boolean,
-      default: false,
-    },
-    claimedAt: {
-      type: Date,
     },
     deadline: {
       type: Date,
-      // Optional deadline for the bounty
+      required: true,
     },
+    totalPool: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    status: {
+      type: String,
+      enum: ["OPEN", "RESOLVED"],
+      default: "OPEN",
+    },
+    participants: [bountyParticipantSchema],
   },
   { timestamps: true }
 );

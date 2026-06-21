@@ -1,341 +1,483 @@
 # RankLeet 🏆
 
-A competitive LeetCode ranking platform where users can form groups, track their LeetCode progress, and compete on a dynamic leaderboard. Built with React, Express.js, and MongoDB.
+A competitive LeetCode ranking and bounty platform where users form groups, track progress, compete on dynamic leaderboards, and participate in a gamified bounty economy. Built with React, Express.js, Node-Cron, and MongoDB.
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
+![License](https://img.shields.io/badge/license-ISC-blue)
+
+---
 
 ## ✨ Features
 
-- **User Authentication**: Secure registration and login with JWT
-- **Profile Management**: Link your LeetCode account and track problem-solving progress
-- **Group Formation**: Create or join groups with invite codes
-- **Real-time Leaderboards**: Dynamic leaderboards showing group rankings by score
-- **Automatic Stats Refresh**: Background job updates LeetCode statistics every 30 minutes
-- **Smart Scoring**: Problems weighted by difficulty (Easy: 1pt, Medium: 3pts, Hard: 5pts)
-- **Responsive Design**: Beautiful dark-themed UI built with Tailwind CSS
+### Core Features
+- **🔐 User Authentication** - Secure JWT-based registration and login with bcryptjs password hashing
+- **👤 Profile Management** - Link LeetCode account and automatically sync problem-solving progress
+- **👥 Group Formation** - Create or join groups with shareable invite codes
+- **🏅 Dynamic Leaderboards** - Real-time group rankings sorted by weighted score
+- **📊 LeetCode Integration** - Automatic stats refresh every 30 minutes via background jobs
+- **🎯 Smart Scoring System** - Weighted by difficulty (Easy: 1pt, Medium: 2pts, Hard: 3pts)
+- **📈 Submission Calendar** - Visual heatmap of coding activity over time
+- **🏆 Contest Tracking** - Monitor LeetCode contest history and ratings
+
+### Bounty System
+- **💰 Bounty Economy** - Create challenges with wagers and objective targets
+- **⚡ Point Seeding** - Users earn initial bounty points from existing LeetCode progress
+- **📅 Smart Deadlines** - All bounty deadlines normalized to UTC midnight
+- **🗑️ Auto Cleanup** - Bounties automatically deleted 7 days after deadline
+- **🎲 Wager System** - Join bounties with adjustable bounty point wagers
+- **🏁 Resolution** - Automatic bounty resolution and point distribution to winners
+
+### AI Features
+- **🤖 AI Activity Feed** - Weekly AI-generated roasts, hype messages, and insights
+- **💡 Mastery Paths** - Smart recommendations for problem types to focus on
+- **📝 Recent Tags** - Analysis of recently solved problem categories
+
+### UI/UX
+- **🎨 Dark Theme** - Beautiful dark-themed interface with gradient accents
+- **📱 Responsive Design** - Works seamlessly on desktop and mobile
+- **⚙️ Real-time Updates** - Live leaderboard and bounty board updates
+- **🔔 Error Handling** - Toast notifications and error boundaries for graceful failures
+
+---
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React 19** - UI library
-- **React Router 7** - Client-side routing
-- **Axios** - HTTP client
-- **Tailwind CSS 3** - Styling
-- **Vite** - Build tool
+- **React 19.2** - Modern UI library with hooks and concurrent rendering
+- **React Router 7.13** - Client-side routing and navigation
+- **Vite 7.3** - Lightning-fast build tool with HMR
+- **Axios 1.13** - Promise-based HTTP client
+- **Tailwind CSS 3.4** - Utility-first CSS framework
+- **Recharts 3.8** - React charting library for visualizations
+- **PropTypes 15.8** - Runtime type checking
 
 ### Backend
-- **Node.js + Express 4** - Server framework
-- **MongoDB 9** - Database
-- **Mongoose 8** - ODM
-- **JWT** - Authentication
-- **bcryptjs** - Password hashing
-- **express-validator** - Input validation
-- **Helmet.js** - Security headers
-- **node-cron** - Scheduled jobs
+- **Node.js 18+** - JavaScript runtime
+- **Express 5.2** - Minimalist web framework
+- **MongoDB 9** - NoSQL database
+- **Mongoose 9.2** - MongoDB ODM with schema validation
+- **JWT 9.0** - JSON Web Token authentication
+- **bcryptjs 3.0** - Password hashing and comparison
+- **node-cron 4.2** - Task scheduling for background jobs
+- **express-validator 7.3** - Input validation middleware
+- **Helmet 8.1** - HTTP header security middleware
+- **express-rate-limit 8.3** - Rate limiting middleware
+- **CORS 2.8** - Cross-origin resource sharing
+- **@google/genai 2.7** - Google Generative AI integration
+- **Axios 1.16** - Server-side HTTP client for LeetCode API
 
-### DevTools
-- **Nodemon** - Development server
-- **ESLint** - Code linting
-- **Vite** - Frontend build
+### Development
+- **Nodemon 3.1** - Auto-reload server during development
+- **ESLint 9.39** - Code quality and style linting
+- **PostCSS 8.5** - CSS transformation tool
+- **dotenv 17.3** - Environment variable management
 
-## � Documentation
+---
 
-This repository contains the main README for users and developers. Internal development documentation including production guides, API fixes, validation details, and utility references are maintained locally for team reference but are not included in version control to keep the repository focused on production-ready code.
+## 📋 Prerequisites
 
-## �📦 Installation
+- **Node.js** >= 18.0.0
+- **npm** >= 9.0.0
+- **MongoDB** Account (local or MongoDB Atlas)
+- **Google Generative AI API Key** (optional, for mastery paths)
+- **Git** for version control
 
-### Prerequisites
-- Node.js >= 18.0.0
-- npm or yarn
-- MongoDB Atlas account (for database)
+---
 
-### Clone Repository
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/AdarshKumar-rathaur/rankleet.git
-cd RankLeet
+cd rankleet
 ```
 
-## 🚀 Quick Start
+### 2. Environment Configuration
 
-### 1. Backend Setup
-
+#### Server Setup
 ```bash
 cd server
+cp .env.example .env
+```
+
+Edit `server/.env` with your credentials:
+```env
+# Database
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/rankleet
+
+# Security
+JWT_SECRET=your-secure-jwt-secret-min-32-chars
+CRON_SECRET=your-secure-cron-secret-min-16-chars
+NODE_ENV=development
+
+# Server
+PORT=5000
+SERVER_URL=http://localhost:5000
+CLIENT_URL=http://localhost:5173
+
+# AI
+LLM_PROVIDER=google
+LLM_API_KEY=your-google-genai-api-key
+```
+
+#### Client Setup
+```bash
+cd ../client
+cat > .env.local << EOF
+VITE_API_URL=http://localhost:5000/api
+EOF
+```
+
+### 3. Install Dependencies
+
+```bash
+# From project root
 npm install
 ```
 
-Create a `.env` file in the server directory:
-```env
-NODE_ENV=development
-PORT=5000
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/rankleet
-JWT_SECRET=your-secret-key-change-in-production
-CLIENT_URL=http://localhost:5173
-```
-
-Start the server:
+Or install separately:
 ```bash
-npm run dev
+# Install server dependencies
+cd server && npm install && cd ..
+
+# Install client dependencies
+cd client && npm install && cd ..
 ```
 
-The API will be available at `http://localhost:5000`
+### 4. Database Setup
 
-### 2. Frontend Setup
+Ensure MongoDB is running:
+```bash
+# If using local MongoDB
+mongod
 
+# Or use MongoDB Atlas (cloud)
+# Update MONGO_URI in .env
+```
+
+### 5. Start Development Server
+
+```bash
+# From project root - runs both client and server concurrently
+npm run dev
+
+# OR run separately
+# Terminal 1: npm run dev:server (from server directory)
+# Terminal 2: npm run dev:client (from client directory)
+```
+
+Access the application:
+- **Client:** http://localhost:5173
+- **Server:** http://localhost:5000
+- **API Health:** http://localhost:5000/api/health
+
+---
+
+## 📦 Production Build
+
+### Build Client
 ```bash
 cd client
-npm install
+npm run build
 ```
 
-Create a `.env.local` file in the client directory:
-```env
-VITE_API_URL=http://localhost:5000/api
-VITE_FRONTEND_URL=http://localhost:5173
-```
-
-Start the development server:
+### Production Deployment
 ```bash
-npm run dev
+# Set environment
+NODE_ENV=production
+
+# Start server (assumes client is built)
+cd server
+npm start
 ```
 
-The application will be available at `http://localhost:5173`
+### Docker Deployment (Optional)
+```bash
+docker-compose up --build
+```
 
-## 🔧 Configuration
+---
 
-### Environment Variables
+## 📖 Usage Guide
 
-#### Server (`.env`)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `development` or `production` |
-| `PORT` | Server port | `5000` |
-| `MONGO_URI` | MongoDB connection string | `mongodb+srv://...` |
-| `JWT_SECRET` | JWT signing key (min 32 chars in production) | Random string |
-| `CLIENT_URL` | Frontend URL for CORS | `http://localhost:5173` |
-| `SERVER_URL` | Server URL for health checks | `http://localhost:5000` |
+### Register & Login
+1. Visit http://localhost:5173
+2. Click "Register" and create an account with:
+   - Name, email, password (min 8 chars, letters + numbers)
+   - LeetCode username
+3. Login with your credentials
 
-#### Client (`.env.local`)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_URL` | API base URL | `http://localhost:5000/api` |
-| `VITE_FRONTEND_URL` | Frontend URL | `http://localhost:5173` |
+### Create a Group
+1. Navigate to Dashboard → Groups
+2. Click "Create Group"
+3. Enter group name, get invite code
+4. Share code with others to join
 
-## 📁 Project Structure
+### Join a Group
+1. Obtain invite code from group creator
+2. Click "Join Group" and enter code
+3. You'll appear on the group leaderboard
+
+### View Leaderboard
+1. Select a group from sidebar
+2. See ranked members by score
+3. Scores update every 30 minutes automatically
+
+### Create a Bounty
+1. Go to Bounties tab (requires group)
+2. Click "Create Bounty"
+3. Set objective (Easy/Medium/Hard/Total solves)
+4. Set target amount and deadline
+5. Other members can join with wagers
+
+### Join a Bounty
+1. View bounties in the board
+2. Click "Join Bounty"
+3. Enter wager amount (in bounty points)
+4. Compete until deadline, earn rewards if won
+
+### Sync Points
+1. Go to Dashboard → Points Card
+2. Click "Sync Points" to refresh bounty points
+3. Points awarded based on new progress since last sync
+
+---
+
+## 🗂️ Project Structure
 
 ```
-RankLeet/
-├── client/                      # React frontend
+rankleet/
+├── client/                    # React frontend
 │   ├── src/
-│   │   ├── components/         # Reusable components
-│   │   │   ├── Leaderboard.jsx
-│   │   │   ├── Navbar.jsx
-│   │   │   └── ProtectedRoute.jsx
-│   │   ├── pages/              # Page components
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── Group.jsx
-│   │   │   ├── Join.jsx
-│   │   │   ├── Login.jsx
-│   │   │   └── Register.jsx
-│   │   ├── services/           # API services
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── vite.config.js
-│   ├── tailwind.config.js
+│   │   ├── components/       # Reusable React components
+│   │   ├── pages/            # Page components (Login, Dashboard, etc.)
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── services/         # API client (axios)
+│   │   ├── utils/            # Utility functions and helpers
+│   │   ├── App.jsx           # Main app component
+│   │   └── main.jsx          # React entry point
+│   ├── package.json
+│   ├── vite.config.js        # Vite build config
+│   └── tailwind.config.js    # Tailwind CSS config
+│
+├── server/                    # Express backend
+│   ├── config/               # Database and configuration
+│   ├── controllers/          # Route handlers and business logic
+│   ├── middleware/           # Express middleware (auth, validation, etc.)
+│   ├── models/               # Mongoose schemas
+│   ├── routes/               # API route definitions
+│   ├── services/             # External services (LeetCode, AI, cron jobs)
+│   ├── utils/                # Utility functions
+│   ├── server.js             # Express app setup and entry point
 │   └── package.json
 │
-├── server/                      # Express backend
-│   ├── config/
-│   │   └── db.js              # Database connection
-│   ├── controllers/           # Request handlers
-│   │   ├── authController.js
-│   │   ├── groupController.js
-│   │   └── userController.js
-│   ├── middleware/            # Express middleware
-│   │   ├── authMiddleware.js
-│   │   └── errorHandler.js
-│   ├── models/                # MongoDB schemas
-│   │   ├── Group.js
-│   │   └── User.js
-│   ├── routes/                # API routes
-│   │   ├── authRoutes.js
-│   │   ├── groupRoutes.js
-│   │   └── userRoutes.js
-│   ├── services/              # Business logic
-│   │   ├── cronJobs.js
-│   │   └── leetcodeService.js
-│   ├── utils/
-│   │   └── scoreCalculator.js
-│   ├── server.js
-│   └── package.json
-│
-├── .gitignore
-├── PRODUCTION_GUIDE.md
-├── FIXES_APPLIED.md
-└── README.md
+├── package.json              # Root package with npm scripts
+├── .env.example              # Environment template
+├── .gitignore                # Git ignore rules
+└── README.md                 # This file
 ```
 
-## 🔐 API Endpoints
+---
+
+## 🔌 API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` - Create new user account
 - `POST /api/auth/login` - Login and get JWT token
 
 ### Users
-- `GET /api/users/profile` - Get current user profile (Protected)
-- `GET /api/users/groups` - Get user's groups (Protected)
+- `GET /api/users/profile` - Get current user profile
+- `GET /api/users/groups` - Get user's groups
+- `POST /api/users/sync-points` - Sync bounty points from LeetCode progress
+- `POST /api/users/refresh` - Force refresh LeetCode data
+- `GET /api/users/leetcode-totals` - Get global LeetCode statistics
 
 ### Groups
-- `POST /api/groups/create` - Create new group (Protected)
-- `POST /api/groups/join/:inviteCode` - Join group by code (Protected)
-- `GET /api/groups/:groupId` - Get group details (Protected)
-- `GET /api/groups/:groupId/leaderboard` - Get leaderboard (Protected)
-- `DELETE /api/groups/:groupId` - Delete group (Protected, creator only)
+- `POST /api/groups/create` - Create new group
+- `GET /api/groups/join/:inviteCode` - Join group by code
+- `GET /api/groups/:id/leaderboard` - Get group leaderboard
+- `DELETE /api/groups/:id` - Delete group (creator only)
 
-### Health
-- `GET /health` - Server health check
+### Bounties
+- `POST /api/bounties/create` - Create new bounty
+- `GET /api/bounties/group/:groupId` - Get group bounties
+- `POST /api/bounties/:id/join` - Join bounty with wager
+- `POST /api/bounties/resolve` - Resolve expired bounties (cron)
+
+### AI Activity
+- `GET /api/ai-activity/feed` - Get AI activity feed
+- `GET /api/ai-activity/group/:groupId` - Get group AI activities
+- `POST /api/ai-activity/:id/like` - Like an activity
+
+---
+
+## 🔄 Background Jobs (Cron)
+
+The application runs several automated tasks:
+
+- **30-minute cycle:** Refresh LeetCode stats for all users
+- **Daily at 3 AM UTC:** Delete bounties older than 7 days
+- **Weekly on Monday at 9 AM UTC:** Generate AI activity messages
+- **Weekly on Sunday at 10 AM UTC:** Regenerate mastery paths for all users
+
+---
 
 ## 🔒 Security Features
 
-- ✅ Password hashing with bcryptjs (12 rounds)
-- ✅ JWT-based authentication (7-day expiration)
-- ✅ Rate limiting (100 req/15min global, 5 req/15min auth)
-- ✅ CORS protection
-- ✅ Helmet.js security headers
+- ✅ JWT authentication with 7-day expiry
+- ✅ bcryptjs password hashing (12 rounds)
+- ✅ Rate limiting (5 auth requests, 100 API requests per 15 min)
+- ✅ Content Security Policy (CSP) headers
+- ✅ CORS protection with whitelist
+- ✅ Helmet.js HTTP header security
 - ✅ Input validation and sanitization
-- ✅ MongoDB injection prevention
-- ✅ Environment variable validation
-- ✅ Secure error handling
+- ✅ NoSQL injection prevention
+- ✅ XSS protection
+- ✅ HSTS header (1-year max-age)
 
-
-## 🚀 Deployment
-
-### Render.com (Recommended)
-
-1. **Connect Repository**
-   - Fork/clone this repository to GitHub
-   - Connect to Render.com dashboard
-
-2. **Environment Variables**
-   ```env
-   NODE_ENV=production
-   MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/rankleet
-   JWT_SECRET=your-very-secure-random-jwt-secret-here
-   CLIENT_URL=https://your-app-name.onrender.com
-   ```
-
-3. **Deploy Settings**
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
-   - **Node Version**: 18+ (or latest LTS)
-
-4. **Keep the app warm on free Render plans**
-   - Render can put free services to sleep after inactivity.
-   - Use the `render.yaml` cron job to ping the backend health check every 4 minutes.
-   - Update `CRON_PING_URL` in `render.yaml` to your actual Render URL, e.g.:
-     `https://your-app-name.onrender.com/health`
-
-5. **Database Setup**
-   - Create MongoDB Atlas cluster
-   - Whitelist Render IP (0.0.0.0/0) in network access
-   - Create database user with read/write permissions
-
-### Manual Deployment
-
-```bash
-# Install dependencies
-npm run postinstall
-
-# Build frontend
-npm run build
-
-# Start production server
-npm start
-```
-
-### Quick Deploy Checklist
-1. Configure all environment variables
-2. Generate strong JWT_SECRET
-3. Set up MongoDB Atlas cluster
-4. Build frontend: `npm run build` in client/
-5. Deploy with Node.js or Docker
-6. Configure CORS for your domain
-7. Enable HTTPS on your server
-
-## 📊 LeetCode Integration
-
-- Fetches stats from LeetCode GraphQL API
-- Updates every 30 minutes via cron job
-- Tracks Easy, Medium, Hard problems solved
-- Calculates weighted score (1-3-5 point system)
-- Handles API errors gracefully with retry logic
+---
 
 ## 🧪 Testing
 
-### Frontend
+### Run Linter
 ```bash
-cd client
-npm run lint  # ESLint
+cd client && npm run lint
 ```
 
-### Backend
-Create test file as needed. Current setup ready for:
-- Jest for unit tests
-- Supertest for API tests
+### Manual Testing Checklist
+- [ ] Register with valid/invalid inputs
+- [ ] Login with correct/incorrect credentials
+- [ ] Create and join group
+- [ ] View group leaderboard
+- [ ] Create bounty with various objectives
+- [ ] Join bounty with different wagers
+- [ ] Sync bounty points
+- [ ] View profile and mastery path
+- [ ] Check AI activity feed
 
-## 📈 Performance Optimizations
+---
 
-- Database query optimization with lean()
-- Connection pooling (5-10 connections)
-- Request payload limit (10KB)
-- Timeout on external API calls (10s)
-- Efficient cron job scheduling
+## 📊 Performance Optimization
 
-## 🐛 Known Issues & Limitations
+- **Caching:** GET request caching with 30-second TTL
+- **Lean queries:** Database queries exclude unnecessary fields
+- **Batch operations:** LeetCode stats fetched once per user per cycle
+- **Connection pooling:** MongoDB connection pool size: 5-10
+- **Rate limiting:** Prevents server overload
 
-1. **Local Storage**: Tokens stored in localStorage (consider httpOnly cookies for production)
-2. **Cron Jobs**: In-memory store (use Redis for distributed systems)
-3. **LeetCode API**: Rate limited - stats refresh every 30 minutes
-4. **Profile Picture**: Not implemented yet
+---
 
-## 🔄 Future Enhancements
+## 🐛 Troubleshooting
 
-- [ ] Token refresh mechanism
-- [ ] Profile pictures/avatars
-- [ ] Email verification
-- [ ] Password reset
-- [ ] Group chat
-- [ ] Problem solving notifications
-- [ ] Achievement badges
-- [ ] API rate limit by user
-- [ ] Two-factor authentication
-- [ ] Dark/Light theme toggle
+### MongoDB Connection Failed
+```
+Error: MONGO_URI not configured
+Solution: Check .env file and verify MongoDB connection string is correct
+```
+
+### Port Already in Use
+```
+Solution: Change PORT in .env or kill the process using port 5000
+lsof -i :5000  # macOS/Linux
+netstat -ano | findstr :5000  # Windows
+```
+
+### CORS Errors
+```
+Solution: Update CLIENT_URL in server .env to match frontend URL
+```
+
+### LeetCode Stats Not Updating
+```
+Solution: Check if LeetCode username is correct in user profile
+Background jobs run every 30 minutes automatically
+```
+
+### 401 Unauthorized on API Calls
+```
+Solution: Token may be expired. Login again to get a new token
+```
+
+---
+
+## 📈 Deployment Checklist
+
+- [ ] Set NODE_ENV=production
+- [ ] Generate strong JWT_SECRET and CRON_SECRET
+- [ ] Configure MONGO_URI for production database
+- [ ] Set CLIENT_URL to production frontend domain
+- [ ] Enable HTTPS/TLS on server
+- [ ] Configure firewall and security groups
+- [ ] Set up database backups
+- [ ] Enable error logging/monitoring (Sentry)
+- [ ] Run `npm audit` and fix vulnerabilities
+- [ ] Test all features in production environment
+
+---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👨‍💻 Author
-
-Created with ❤️ by Adarsh Singh
-
-## 📞 Support & Contact
-
-For support, open an issue on GitHub.
-
-## 🙏 Acknowledgments
-
-- LeetCode for the public API
-- React community for amazing tools
-- Open source contributors
 
 ---
 
-Made with ❤️ | [GitHub](https://github.com/AdarshKumar-rathaur/rankleet.git) | Check out [RankLeet](https://rankleet.vercel.app)
+## 📄 License
+
+This project is licensed under the ISC License - see the LICENSE file for details.
+
+---
+
+## 👨‍💻 Author
+
+**Adarsh Singh** - [GitHub Profile](https://github.com/AdarshKumar-rathaur)
+
+---
+
+## 🙏 Acknowledgments
+
+- LeetCode API for problem data
+- MongoDB for reliable data storage
+- Google Generative AI for intelligent recommendations
+- React and Express communities
+
+---
+
+## 📞 Support
+
+For issues, questions, or suggestions:
+- Open an [Issue](https://github.com/AdarshKumar-rathaur/rankleet/issues)
+- Check [Discussions](https://github.com/AdarshKumar-rathaur/rankleet/discussions)
+- Email: adarshkumar9582@gmail.com
+
+---
+
+## 🗺️ Roadmap
+
+### v1.1
+- [ ] User profile avatars
+- [ ] In-game notifications system
+- [ ] Friend requests and messaging
+- [ ] Tournament brackets
+
+### v1.2
+- [ ] Twitch integration
+- [ ] Problem difficulty recommendations
+- [ ] Custom problem playlists
+
+### v2.0
+- [ ] Marketplace for bounty rewards
+- [ ] Streaming integration
+- [ ] Advanced analytics dashboard
+- [ ] OpenAI GPT integration for code reviews
+
+---
+
+**Last Updated:** June 21, 2026  
+**Status:** Active Development
+

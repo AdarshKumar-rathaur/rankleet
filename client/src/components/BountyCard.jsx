@@ -1,9 +1,13 @@
 import PropTypes from "prop-types";
 import { useState } from "react";
 
-/**
- * Get current user ID from JWT token stored in localStorage
- */
+const objectiveLabel = {
+  EASY: "Easy solves",
+  MEDIUM: "Medium solves",
+  HARD: "Hard solves",
+  TOTAL: "Total solves",
+};
+
 function getCurrentUserId() {
   try {
     const token = localStorage.getItem("token");
@@ -15,155 +19,80 @@ function getCurrentUserId() {
   }
 }
 
-export default function BountyCard({ bounty, onAccept, onClaim }) {
+export default function BountyCard({ bounty, onJoin }) {
   const [showDetails, setShowDetails] = useState(false);
-  const [isActing, setIsActing] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   const currentUserId = getCurrentUserId();
+  const isOpen = bounty.status === "OPEN";
+  const deadlineDate = new Date(bounty.deadline);
+  const isExpired = new Date() >= deadlineDate;
+  const hasJoined = bounty.participants?.some(
+    (participant) => participant.user && participant.user._id?.toString() === currentUserId
+  );
+  const displayDeadline = new Date(deadlineDate.getTime() - 1);
 
-  const statusColors = {
-    active: "border-blue-500/30 bg-blue-900/10",
-    completed: "border-emerald-500/30 bg-emerald-900/10",
-    claimed: "border-gray-500/30 bg-gray-900/10",
-  };
-
-  const statusBadgeColors = {
-    active: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-    completed: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
-    claimed: "bg-gray-500/20 text-gray-300 border border-gray-500/30",
-  };
-
-  const status = bounty.claimed ? "claimed" : bounty.completed ? "completed" : "active";
-
-  const difficultyEmoji = { Easy: "🟢", Medium: "🟡", Hard: "🔴" };
-
-  // Check if current user has already accepted this bounty
-  const hasAccepted = currentUserId
-    ? (bounty.acceptedBy || []).some(
-        (id) => (typeof id === "object" ? id._id?.toString() : id?.toString()) === currentUserId
-      )
-    : false;
-
-  // Check if current user has already claimed this bounty
-  const hasClaimed = currentUserId
-    ? (bounty.claimedBy || []).some(
-        (id) => (typeof id === "object" ? id._id?.toString() : id?.toString()) === currentUserId
-      )
-    : false;
-
-  const handleAccept = async (e) => {
+  const handleJoin = async (e) => {
     e.stopPropagation();
-    if (isActing) return;
-    setIsActing(true);
+    if (!isOpen || isJoining) return;
+    setIsJoining(true);
     try {
-      await onAccept?.(bounty._id);
+      await onJoin?.(bounty._id);
     } finally {
-      setIsActing(false);
-    }
-  };
-
-  const handleClaim = async (e) => {
-    e.stopPropagation();
-    if (isActing) return;
-    setIsActing(true);
-    try {
-      await onClaim?.(bounty._id);
-    } finally {
-      setIsActing(false);
+      setIsJoining(false);
     }
   };
 
   return (
     <div
-      className={`p-4 rounded-xl backdrop-blur-md border transition-all duration-300 hover:shadow-lg cursor-pointer ${statusColors[status]}`}
+      className={`p-5 rounded-2xl backdrop-blur-md border transition-all duration-300 hover:shadow-lg ${
+        isOpen ? "border-blue-500/25 bg-blue-900/10" : "border-gray-500/20 bg-gray-900/20"
+      }`}
       onClick={() => setShowDetails(!showDetails)}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0 mr-3">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg flex-shrink-0">{difficultyEmoji[bounty.difficulty] || "⚡"}</span>
-            <h3 className="font-semibold text-white truncate">{bounty.goal}</h3>
-          </div>
-          {bounty.description && (
-            <p className="text-xs text-gray-400 truncate">{bounty.description}</p>
-          )}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="min-w-0">
+          <h3 className="text-xl font-semibold text-white truncate">{bounty.title}</h3>
+          <p className="text-sm text-gray-400 truncate">
+            {objectiveLabel[bounty.objectiveType] || bounty.objectiveType} • {bounty.targetAmount}
+          </p>
         </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${statusBadgeColors[status]}`}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${isOpen ? "bg-blue-500/20 text-blue-300" : "bg-gray-700/20 text-gray-300"}`}>
+          {bounty.status}
         </span>
       </div>
 
-      {/* Points & Creator */}
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-1 text-yellow-400 font-bold">
-          ⭐ {bounty.points} pts
+      <div className="grid grid-cols-2 gap-3 text-sm text-gray-300 mb-4">
+        <div className="rounded-xl bg-white/5 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Pool</p>
+          <p className="text-lg font-semibold text-white">{bounty.totalPool}</p>
         </div>
-        <p className="text-xs text-gray-500">by {bounty.createdBy?.name || "Unknown"}</p>
+        <div className="rounded-xl bg-white/5 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Participants</p>
+          <p className="text-lg font-semibold text-white">{bounty.participants?.length || 0}</p>
+        </div>
       </div>
 
-      {/* Expanded Details */}
-      {showDetails && (
-        <div className="border-t border-white/10 pt-3 mt-3 space-y-3">
-          {bounty.description && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Description</p>
-              <p className="text-sm text-gray-300">{bounty.description}</p>
-            </div>
-          )}
+      <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
+        <span>Deadline: {displayDeadline.toLocaleDateString()} at midnight</span>
+        <span>{hasJoined ? "You joined" : isExpired ? "Expired" : "Open to join"}</span>
+      </div>
 
-          <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-            <span>Created: {new Date(bounty.createdAt).toLocaleDateString()}</span>
-            {bounty.deadline && (
-              <span className="text-orange-400">
-                Due: {new Date(bounty.deadline).toLocaleDateString()}
-              </span>
-            )}
-            {bounty.acceptedBy?.length > 0 && (
-              <span className="text-blue-400">{bounty.acceptedBy.length} accepted</span>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-1">
-            {/* Accept: show when active and user hasn't accepted yet */}
-            {status === "active" && !hasAccepted && (
-              <button
-                onClick={handleAccept}
-                disabled={isActing}
-                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
-              >
-                {isActing ? "..." : "✋ Accept Bounty"}
-              </button>
-            )}
-
-            {/* Already accepted badge */}
-            {status === "active" && hasAccepted && (
-              <div className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-blue-300 bg-blue-900/20 border border-blue-500/20 text-center">
-                ✓ Accepted
-              </div>
-            )}
-
-            {/* Claim: show when completed, user accepted it, and hasn't claimed yet */}
-            {status === "completed" && hasAccepted && !hasClaimed && (
-              <button
-                onClick={handleClaim}
-                disabled={isActing}
-                className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
-              >
-                {isActing ? "..." : "🎁 Claim Reward"}
-              </button>
-            )}
-
-            {/* Already claimed badge */}
-            {hasClaimed && (
-              <div className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-emerald-300 bg-emerald-900/20 border border-emerald-500/20 text-center">
-                ✓ Reward Claimed
-              </div>
-            )}
-          </div>
+      {showDetails && bounty.description && (
+        <div className="mb-4 text-sm text-gray-300">
+          {bounty.description}
         </div>
       )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={handleJoin}
+          disabled={!isOpen || isExpired || hasJoined || isJoining}
+          className="flex-1 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {hasJoined ? "Joined" : isExpired ? "Expired" : isJoining ? "Joining..." : "Join Bounty"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -171,21 +100,14 @@ export default function BountyCard({ bounty, onAccept, onClaim }) {
 BountyCard.propTypes = {
   bounty: PropTypes.shape({
     _id: PropTypes.string.isRequired,
-    goal: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    objectiveType: PropTypes.oneOf(["EASY", "MEDIUM", "HARD", "TOTAL"]).isRequired,
+    targetAmount: PropTypes.number.isRequired,
+    deadline: PropTypes.string.isRequired,
+    totalPool: PropTypes.number,
+    status: PropTypes.oneOf(["OPEN", "RESOLVED"]),
+    participants: PropTypes.array,
     description: PropTypes.string,
-    difficulty: PropTypes.oneOf(["Easy", "Medium", "Hard"]).isRequired,
-    points: PropTypes.number.isRequired,
-    completed: PropTypes.bool,
-    claimed: PropTypes.bool,
-    acceptedBy: PropTypes.array,
-    claimedBy: PropTypes.array,
-    createdBy: PropTypes.shape({
-      _id: PropTypes.string,
-      name: PropTypes.string,
-    }),
-    deadline: PropTypes.string,
-    createdAt: PropTypes.string,
   }).isRequired,
-  onAccept: PropTypes.func,
-  onClaim: PropTypes.func,
+  onJoin: PropTypes.func,
 };

@@ -8,6 +8,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let cronTask = null;
 let weeklyAITask = null;
 let masteryPathTask = null;
+let bountyCleanupTask = null;
 
 const refreshLeetCodeStats = () => {
   // ── 30-minute stats refresh ──────────────────────────────────────────────
@@ -147,6 +148,25 @@ const refreshLeetCodeStats = () => {
   });
 
   console.log("[CRON] Weekly AI task scheduled for Mondays at 9 AM");
+
+  // ── Daily bounty cleanup — remove bounties more than 7 days past deadline ──
+  if (bountyCleanupTask) bountyCleanupTask.stop();
+
+  bountyCleanupTask = cron.schedule("0 3 * * *", async () => {
+    console.log("[CRON-BOUNTY] Cleaning up bounties older than 7 days past deadline...");
+    try {
+      const Bounty = require("../models/Bounty");
+      const threshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const result = await Bounty.deleteMany({ deadline: { $lt: threshold } });
+      console.log(
+        `[CRON-BOUNTY] Deleted ${result.deletedCount || 0} bounties older than ${threshold.toISOString()}`
+      );
+    } catch (error) {
+      console.error("[CRON-BOUNTY] Cleanup failed:", error.message);
+    }
+  });
+
+  console.log("[CRON] Bounty cleanup task scheduled for 3 AM daily");
 
   // ── Sunday 10 AM — regenerate mastery paths for all users ────────────────
   if (masteryPathTask) masteryPathTask.stop();

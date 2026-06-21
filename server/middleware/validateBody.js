@@ -13,7 +13,7 @@ const validateRequestBody = (req, res, next) => {
     const url = req.originalUrl || "";
 
     // Routes that legitimately send no body — skip empty-body check
-    const noBodyRoutes = ["/join/", "/accept", "/claim", "/refresh"];
+    const noBodyRoutes = ["/join/", "/accept", "/claim", "/refresh", "/sync-points"];
     const isNoBodyRoute = noBodyRoutes.some((r) => url.includes(r));
 
     if (isNoBodyRoute) {
@@ -41,11 +41,19 @@ const validateRequestBody = (req, res, next) => {
         return res.status(400).json({ message: `Field '${key}' is too long (max 10000 chars)` });
       }
 
-      // Check for suspicious patterns
+      // Check for suspicious patterns - sanitize input
       if (typeof value === "string") {
-        // Basic NoSQL injection prevention
-        if (/[\$\{\}]/.test(value) && process.env.NODE_ENV === "production") {
-          return res.status(400).json({ message: `Field '${key}' contains invalid characters` });
+        // Strong NoSQL injection prevention (always, not just production)
+        if (/[\$\{\}\[\]]/g.test(value)) {
+          // Check if it looks like an actual NoSQL injection attempt
+          if (/\$\w+|\{\s*\$/.test(value)) {
+            return res.status(400).json({ message: `Field '${key}' contains invalid characters` });
+          }
+        }
+        
+        // XSS prevention - check for script tags
+        if (/<script|javascript:|onerror=|onload=/i.test(value)) {
+          return res.status(400).json({ message: `Field '${key}' contains invalid content` });
         }
       }
     }

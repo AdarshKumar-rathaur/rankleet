@@ -1,6 +1,11 @@
 const User = require('../models/User');
 const Group = require('../models/Group');
-const { fetchAllUserData } = require("../services/leetcodeService");
+const {
+  fetchAllUserData,
+  fetchLeetCodeStats,
+  fetchContestRating,
+  fetchContestHistory,
+} = require("../services/leetcodeService");
 const calculateScore = require("../utils/scoreCalculator");
 const fetchLeetCodeTotals = require("../utils/leetcodeTotals");
 const fetchRecentSubmissionTags = require("../services/leetcodeTagsService");
@@ -18,15 +23,62 @@ function mapToObject(value) {
   return {};
 }
 
+function calculateBountyRewardPoints({ easy = 0, medium = 0, hard = 0, contestRating = 0, contestHistoryCount = 0 }) {
+  return easy + medium * 2 + hard * 3 + contestHistoryCount * 10 + (contestRating - 1300);
+}
+
+function isLastRewardedStatsEmpty(stats = {}) {
+  return [stats.easy, stats.medium, stats.hard, stats.total, stats.contestRating, stats.contestHistoryCount].every(
+    (value) => !value && value !== 0 ? false : value === 0,
+  );
+}
+
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).lean();
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const stats = user.stats || { easy: 0, medium: 0, hard: 0, total: 0, score: 0 };
     const submissionCalendar = mapToObject(user.submissionCalendar);
+    const contestHistoryCount = Array.isArray(user.contestHistory) ? user.contestHistory.length : 0;
+    const lastRewardedStats = user.lastRewardedStats || {
+      easy: 0,
+      medium: 0,
+      hard: 0,
+      total: 0,
+      contestRating: 0,
+      contestHistoryCount: 0,
+    };
+
+    const shouldInitializeRewards = isLastRewardedStatsEmpty(lastRewardedStats) &&
+      (stats.easy > 0 || stats.medium > 0 || stats.hard > 0 || user.contestRating > 0 || contestHistoryCount > 0);
+
+    if (shouldInitializeRewards) {
+      const initialRewardPoints = calculateBountyRewardPoints({
+        easy: stats.easy,
+        medium: stats.medium,
+        hard: stats.hard,
+        contestRating: user.contestRating || 0,
+        contestHistoryCount,
+      });
+
+      if (initialRewardPoints > 0) {
+        user.bountyPoints = (user.bountyPoints || 0) + initialRewardPoints;
+      }
+
+      user.lastRewardedStats = {
+        easy: stats.easy,
+        medium: stats.medium,
+        hard: stats.hard,
+        total: stats.total,
+        contestRating: user.contestRating || 0,
+        contestHistoryCount,
+      };
+
+      await user.save();
+    }
 
     // Send response immediately with whatever is in DB
     res.json({
@@ -209,6 +261,71 @@ exports.refreshUserData = async (req, res) => {
   } catch (error) {
     console.error("[REFRESH] Error:", error.message);
     res.status(500).json({ message: "Failed to refresh data: " + error.message });
+  }
+};
+
+exports.syncUserPoints = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user || !user.leetcodeUsername) {
+      return res.status(400).json(errorResponse("No valid LeetCode username available", 400));
+    }
+
+    const [stats, contestRating, contestHistory] = await Promise.all([
+      fetchLeetCodeStats(user.leetcodeUsername),
+      fetchContestRating(user.leetcodeUsername),
+      fetchContestHistory(user.leetcodeUsername),
+    ]);
+
+    const lastRewarded = user.lastRewardedStats || {
+      easy: 0,
+      medium: 0,
+      hard: 0,
+      total: 0,
+      contestRating: 0,
+      contestHistoryCount: 0,
+    };
+
+    const easyDelta = Math.max(0, (stats.easy || 0) - (lastRewarded.easy || 0));
+    const mediumDelta = Math.max(0, (stats.medium || 0) - (lastRewarded.medium || 0));
+    const hardDelta = Math.max(0, (stats.hard || 0) - (lastRewarded.hard || 0));
+    const ratingDelta = Math.max(0, (contestRating.rating || 0) - (lastRewarded.contestRating || 0));
+    const contestCount = Array.isArray(contestHistory) ? contestHistory.length : 0;
+    const contestDelta = Math.max(0, contestCount - (lastRewarded.contestHistoryCount || 0));
+
+    const rewardPoints =
+      easyDelta +
+      mediumDelta * 2 +
+      hardDelta * 3 +
+      contestDelta * 10 +
+      ratingDelta;
+
+    user.bountyPoints = (user.bountyPoints || 0) + rewardPoints;
+    user.lastRewardedStats = {
+      easy: stats.easy || 0,
+      medium: stats.medium || 0,
+      hard: stats.hard || 0,
+      total: stats.total || 0,
+      contestRating: contestRating.rating || 0,
+      contestHistoryCount: contestCount,
+    };
+
+    await user.save();
+
+    res.status(200).json(
+      successResponse(
+        {
+          bountyPoints: user.bountyPoints,
+          rewardPoints,
+          lastRewardedStats: user.lastRewardedStats,
+        },
+        "User points synced successfully",
+        200
+      )
+    );
+  } catch (error) {
+    console.error("[SYNC POINTS] Error:", error.message);
+    res.status(500).json(errorResponse(error.message || "Failed to sync points", 500));
   }
 };
 

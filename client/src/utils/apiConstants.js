@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     GROUPS: "/users/groups",
     LEETCODE_TOTALS: "/users/leetcode-totals",
     REFRESH: "/users/refresh",
+    SYNC_POINTS: "/users/sync-points",
     MASTERY: "/users/profile", // mastery path is part of profile
   },
 
@@ -32,9 +33,8 @@ export const API_ENDPOINTS = {
   BOUNTIES: {
     CREATE: "/bounties/create",
     GET_BY_GROUP: (groupId) => `/bounties/group/${groupId}`,
-    ACCEPT: (bountyId) => `/bounties/${bountyId}/accept`,
-    CLAIM: (bountyId) => `/bounties/${bountyId}/claim`,
-    DELETE: (bountyId) => `/bounties/${bountyId}`,
+    JOIN: (bountyId) => `/bounties/${bountyId}/join`,
+    RESOLVE: "/bounties/resolve",
   },
 
   // AI Activity

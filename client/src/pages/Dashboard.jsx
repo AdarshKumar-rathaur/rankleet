@@ -6,6 +6,7 @@ import { parseInviteCode } from "../utils/helpers";
 import Navbar from "../components/Navbar";
 import StatCard from "../components/StatCard";
 import ArenaCard from "../components/ArenaCard";
+import BountyPointsCard from "../components/BountyPointsCard";
 import AIActivityFeed from "../components/AIActivityFeed";
 import ContestGraph from "../components/ContestGraph";
 import StreakHeatmap from "../components/StreakHeatmap";
@@ -17,8 +18,14 @@ import {
 import { useLocalStorage } from "../hooks/useCustomHooks";
 
 function Dashboard() {
-  const [storedProfile, setStoredProfile] = useLocalStorage("rankleet-profile", null);
-  const [storedGroups, setStoredGroups] = useLocalStorage("rankleet-groups", []);
+  const [storedProfile, setStoredProfile] = useLocalStorage(
+    "rankleet-profile",
+    null,
+  );
+  const [storedGroups, setStoredGroups] = useLocalStorage(
+    "rankleet-groups",
+    [],
+  );
 
   const [profile, setProfile] = useState(storedProfile);
   const [groups, setGroups] = useState(storedGroups);
@@ -27,13 +34,21 @@ function Dashboard() {
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [groupError, setGroupError] = useState("");
-  const [loading, setLoading] = useState(!storedProfile && storedGroups.length === 0);
+  const [loading, setLoading] = useState(
+    !storedProfile && storedGroups.length === 0,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
   const [aiActivity, setAiActivity] = useState([]);
-  const [leetcodeTotals, setLeetcodeTotals] = useState({ easy: 900, medium: 1800, hard: 800 });
+  const [leetcodeTotals, setLeetcodeTotals] = useState({
+    easy: 900,
+    medium: 1800,
+    hard: 800,
+  });
+
+  const [hasSyncedBountyPoints, setHasSyncedBountyPoints] = useState(false);
 
   const navigate = useNavigate();
   const abortControllerRef = useRef(null);
@@ -56,7 +71,9 @@ function Dashboard() {
       const [profileRes, groupsRes, aiRes, totalsRes] = await Promise.all([
         cachedGet(API_ENDPOINTS.USERS.PROFILE),
         cachedGet(API_ENDPOINTS.USERS.GROUPS),
-        cachedGet(API_ENDPOINTS.AI_ACTIVITY.GET_FEED).catch(() => ({ data: [] })),
+        cachedGet(API_ENDPOINTS.AI_ACTIVITY.GET_FEED).catch(() => ({
+          data: [],
+        })),
         cachedGet(API_ENDPOINTS.USERS.LEETCODE_TOTALS).catch(() => ({
           data: { easy: 900, medium: 1800, hard: 800 },
         })),
@@ -73,7 +90,11 @@ function Dashboard() {
           ? rawAiData
           : [];
       const rawTotals = totalsRes?.data;
-      const freshTotals = rawTotals?.data || { easy: 900, medium: 1800, hard: 800 };
+      const freshTotals = rawTotals?.data || {
+        easy: 900,
+        medium: 1800,
+        hard: 800,
+      };
 
       setProfile(freshProfile);
       setStoredProfile(freshProfile);
@@ -105,7 +126,10 @@ function Dashboard() {
               invalidateCache(API_ENDPOINTS.USERS.PROFILE);
             }
           } catch (refreshErr) {
-            console.warn("[Dashboard] Sync refresh failed:", refreshErr.message);
+            console.warn(
+              "[Dashboard] Sync refresh failed:",
+              refreshErr.message,
+            );
             // Fall back to re-reading from DB (may still be empty but that's ok)
             invalidateCache(API_ENDPOINTS.USERS.PROFILE);
             try {
@@ -150,7 +174,9 @@ function Dashboard() {
     if (isCreating) return;
     setIsCreating(true);
     try {
-      const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, { name: groupName });
+      const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, {
+        name: groupName,
+      });
       setGroups([...groups, res.data]);
       setShowCreate(false);
       setGroupName("");
@@ -193,6 +219,13 @@ function Dashboard() {
     }
   };
 
+  const handlePointsSynced = (updatedPoints) => {
+    if (!profile) return;
+    const refreshedProfile = { ...profile, bountyPoints: updatedPoints };
+    setProfile(refreshedProfile);
+    setStoredProfile(refreshedProfile);
+  };
+
   // ── Loading skeleton ─────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -231,7 +264,9 @@ function Dashboard() {
       <div className="min-h-screen bg-gray-900 text-white">
         <Navbar />
         <div className="p-10 text-center">
-          <p className="text-red-400">{groupError || "Failed to load profile"}</p>
+          <p className="text-red-400">
+            {groupError || "Failed to load profile"}
+          </p>
         </div>
       </div>
     );
@@ -266,86 +301,122 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              difficulty="Easy"
-              count={profile.stats.easy}
-              icon="🟢"
-              color="easy"
-              totalCount={leetcodeTotals.easy}
-            />
-            <StatCard
-              difficulty="Medium"
-              count={profile.stats.medium}
-              icon="🟡"
-              color="medium"
-              totalCount={leetcodeTotals.medium}
-            />
-            <StatCard
-              difficulty="Hard"
-              count={profile.stats.hard}
-              icon="🔴"
-              color="hard"
-              totalCount={leetcodeTotals.hard}
-            />
-            {/* Score Card */}
-            <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-indigo-900/5 shadow-2xl shadow-indigo-500/20 transition-all duration-700 transform scale-100 opacity-100 hover:border-white/20 hover:shadow-2xl">
-              <div className="relative z-10 flex flex-col justify-center h-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-3xl">⭐</span>
-                  <h3 className="text-lg font-semibold text-indigo-400">Rank Score</h3>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+            <div className="xl:col-span-3 space-y-6">
+              <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-slate-900/20 to-slate-900/5 shadow-2xl shadow-slate-500/10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">💻 LeetCode Progress</h2>
+                    <p className="text-sm text-gray-400">Your solved problems, contests and streaks in one view.</p>
+                  </div>
+                  <div className="text-sm text-gray-400">{profile.leetcodeUsername}</div>
                 </div>
-                <div className="text-4xl font-bold text-white mb-3">
-                  {profile.stats.score}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <StatCard
+                    difficulty="Easy"
+                    count={profile.stats.easy}
+                    icon="🟢"
+                    color="easy"
+                    totalCount={leetcodeTotals.easy}
+                  />
+                  <StatCard
+                    difficulty="Medium"
+                    count={profile.stats.medium}
+                    icon="🟡"
+                    color="medium"
+                    totalCount={leetcodeTotals.medium}
+                  />
+                  <StatCard
+                    difficulty="Hard"
+                    count={profile.stats.hard}
+                    icon="🔴"
+                    color="hard"
+                    totalCount={leetcodeTotals.hard}
+                  />
+                  <StatCard
+                    difficulty="Total"
+                    count={profile.stats.total}
+                    icon="🔵"
+                    color="total"
+                    totalCount={leetcodeTotals.total}
+                  />
                 </div>
-                <div className="h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <ContestGraph contestHistory={profile.contestHistory || []} />
+                <StreakHeatmap
+                  submissionCalendar={profile.submissionCalendar || {}}
+                />
+              </div>
+            </div>
+
+            <div className="xl:col-span-3 space-y-6">
+              <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-blue-900/10 shadow-2xl shadow-indigo-500/10">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">🏅 Bounty & Rank</h2>
+                    <p className="text-sm text-gray-400">Your competitive currency and ranking summary.</p>
+                  </div>
+                </div>
+                <div className="space-y-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <BountyPointsCard
+                    bountyPoints={profile.bountyPoints}
+                    onPointsSynced={handlePointsSynced}
+                  />
+                  <div className="p-6 rounded-2xl border border-white/10 bg-slate-950/60">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-3xl">⭐</span>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Rank Score</h3>
+                        <p className="text-sm text-gray-400">A measure of your overall competition strength.</p>
+                      </div>
+                    </div>
+                    <div className="text-5xl font-bold text-white">
+                      {profile.stats.score}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Contest Graph & Streak Heatmap */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <ContestGraph contestHistory={profile.contestHistory || []} />
-          <StreakHeatmap submissionCalendar={profile.submissionCalendar || {}} />
-        </div>
-
-        {/* Mastery Plan CTA */}
-        <div className="mb-8">
-          <div
-            onClick={() => navigate("/mastery")}
-            className="group cursor-pointer p-6 rounded-2xl backdrop-blur-xl border border-purple-500/20 bg-gradient-to-br from-purple-900/20 to-indigo-900/10 shadow-xl hover:shadow-purple-500/20 hover:border-purple-500/30 transition-all duration-300"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-4xl">🎯</span>
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Your Mastery Plan</h2>
-                  <p className="text-gray-400 text-sm">
-                    {profile.masteryPath
-                      ? `${profile.masteryPath.title || "View your personalized learning roadmap"}`
-                      : "AI is generating your personalized learning roadmap..."}
-                  </p>
+          {/* Mastery Plan CTA */}
+          <div className="mb-8">
+            <div
+              onClick={() => navigate("/mastery")}
+              className="group cursor-pointer p-6 rounded-2xl backdrop-blur-xl border border-purple-500/20 bg-gradient-to-br from-purple-900/20 to-indigo-900/10 shadow-xl hover:shadow-purple-500/20 hover:border-purple-500/30 transition-all duration-300"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-4xl">🎯</span>
+                  <div>
+                    <h2 className="text-xl font-bold text-white mb-1">Your Mastery Plan</h2>
+                    <p className="text-gray-400 text-sm">
+                      {profile.masteryPath
+                        ? `${profile.masteryPath.title || "View your personalized learning roadmap"}`
+                        : "AI is generating your personalized learning roadmap..."}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-purple-500/30 bg-purple-500/20 group-hover:bg-purple-500/30 text-purple-300 font-medium text-sm transition-all duration-200">
+                  View Plan
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-purple-500/30 bg-purple-500/20 group-hover:bg-purple-500/30 text-purple-300 font-medium text-sm transition-all duration-200">
-                View Plan
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </div>
-            </div>
 
-            {/* Preview of mastery level if available */}
-            {profile.masteryPath?.level && (
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full text-xs font-semibold border bg-purple-500/20 border-purple-500/30 text-purple-300 capitalize">
-                  {profile.masteryPath.level}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {profile.masteryPath.steps?.length || 0} steps in your plan
-                </span>
-              </div>
-            )}
+              {/* Preview of mastery level if available */}
+              {profile.masteryPath?.level && (
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold border bg-purple-500/20 border-purple-500/30 text-purple-300 capitalize">
+                    {profile.masteryPath.level}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {profile.masteryPath.steps?.length || 0} steps in your plan
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -405,7 +476,9 @@ function Dashboard() {
 
           {/* Right Column: AI Activity Feed */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-4">🤖 AI Activity Feed</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">
+              🤖 AI Activity Feed
+            </h2>
             <AIActivityFeed feedItems={aiActivity} />
           </div>
         </div>
@@ -426,7 +499,9 @@ function Dashboard() {
                 placeholder="Arena name (e.g., 'Tech Giants')"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && groupName.trim() && createGroup()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && groupName.trim() && createGroup()
+                }
                 className="w-full p-3 rounded-lg bg-gray-800 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 mb-4"
               />
               <div className="flex gap-3">
@@ -464,7 +539,9 @@ function Dashboard() {
                 placeholder="Paste invite code or link"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && inviteCode.trim() && joinGroup()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && inviteCode.trim() && joinGroup()
+                }
                 className="w-full p-3 rounded-lg bg-gray-800 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500/50 mb-4"
               />
               <div className="flex gap-3">

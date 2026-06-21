@@ -225,8 +225,10 @@ const fetchAllUserData = async (username) => {
   };
 };
 
-module.exports = fetchLeetCodeStats;
-module.exports.fetchAllUserData = fetchAllUserData;
-module.exports.fetchContestRating = fetchContestRating;
-module.exports.fetchContestHistory = fetchContestHistory;
-module.exports.fetchSubmissionCalendar = fetchSubmissionCalendar;
+module.exports = {
+  fetchLeetCodeStats,
+  fetchAllUserData,
+  fetchContestRating,
+  fetchContestHistory,
+  fetchSubmissionCalendar,
+};
