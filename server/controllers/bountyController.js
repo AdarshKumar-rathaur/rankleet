@@ -47,9 +47,6 @@ exports.createBounty = async (req, res) => {
       return res.status(400).json(errorResponse("Bounty deadline must be in the future", 400));
     }
 
-    deadlineDate.setUTCHours(0, 0, 0, 0);
-    deadlineDate.setUTCDate(deadlineDate.getUTCDate() + 1);
-
     const group = await Group.findById(groupId);
     if (!group || !group.members.some(memberId => memberId.toString() === userId.toString())) {
       return res.status(403).json(errorResponse("Not a member of this group", 403));

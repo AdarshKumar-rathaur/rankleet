@@ -283,12 +283,12 @@ function Dashboard() {
 
       <Navbar />
 
-      <div className="relative z-10 p-8 max-w-7xl mx-auto">
+      <div className="relative z-10 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Welcome back, {profile.name}!
               </h1>
               <p className="text-gray-400">Keep grinding and climbing the ranks 🚀</p>
@@ -306,7 +306,7 @@ function Dashboard() {
               <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-slate-900/20 to-slate-900/5 shadow-2xl shadow-slate-500/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">💻 LeetCode Progress</h2>
+                    <h2 className="text-lg md:text-2xl font-bold text-white">💻 LeetCode Progress</h2>
                     <p className="text-sm text-gray-400">Your solved problems, contests and streaks in one view.</p>
                   </div>
                   <div className="text-sm text-gray-400">{profile.leetcodeUsername}</div>
@@ -355,7 +355,7 @@ function Dashboard() {
               <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-indigo-900/20 to-blue-900/10 shadow-2xl shadow-indigo-500/10">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">🏅 Bounty & Rank</h2>
+                    <h2 className="text-lg md:text-2xl font-bold text-white">🏅 Bounty & Rank</h2>
                     <p className="text-sm text-gray-400">Your competitive currency and ranking summary.</p>
                   </div>
                 </div>
@@ -391,7 +391,7 @@ function Dashboard() {
                 <div className="flex items-center gap-4">
                   <span className="text-4xl">🎯</span>
                   <div>
-                    <h2 className="text-xl font-bold text-white mb-1">Your Mastery Plan</h2>
+                  <h2 className="text-lg md:text-2xl font-bold text-white mb-1">Your Mastery Plan</h2>
                     <p className="text-gray-400 text-sm">
                       {profile.masteryPath
                         ? `${profile.masteryPath.title || "View your personalized learning roadmap"}`
@@ -427,7 +427,7 @@ function Dashboard() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-1">🏛️ Your Arenas</h2>
+                  <h2 className="text-lg md:text-2xl font-bold text-white mb-1">🏛️ Your Arenas</h2>
                   <p className="text-sm text-gray-400">Join the competition</p>
                 </div>
                 <div className="space-x-3">
@@ -476,7 +476,7 @@ function Dashboard() {
 
           {/* Right Column: AI Activity Feed */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-4">
+            <h2 className="text-lg md:text-2xl font-bold text-white mb-4">
               🤖 AI Activity Feed
             </h2>
             <AIActivityFeed feedItems={aiActivity} />
@@ -490,10 +490,10 @@ function Dashboard() {
             onClick={() => setShowCreate(false)}
           >
             <div
-              className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl"
+              className="w-full max-w-md p-6 md:p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold mb-4">Create a New Arena</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">Create a New Arena</h2>
               <input
                 type="text"
                 placeholder="Arena name (e.g., 'Tech Giants')"
@@ -530,10 +530,10 @@ function Dashboard() {
             onClick={() => setShowJoin(false)}
           >
             <div
-              className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl"
+              className="w-full max-w-md p-6 md:p-8 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-900/40 shadow-2xl mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold mb-4">Join an Arena</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">Join an Arena</h2>
               <input
                 type="text"
                 placeholder="Paste invite code or link"

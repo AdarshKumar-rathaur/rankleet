@@ -121,7 +121,7 @@ export default function StreakHeatmap({ submissionCalendar = {} }) {
   const totalWidth = weeks.length * STEP;
 
   return (
-    <div className="p-5 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/40 to-gray-900/10 shadow-xl">
+    <div className="p-4 md:p-5 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/40 to-gray-900/10 shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-semibold text-white flex items-center gap-2">

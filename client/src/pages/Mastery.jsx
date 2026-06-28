@@ -108,7 +108,7 @@ function Mastery() {
         </div>
       )}
 
-      <div className="relative z-10 max-w-4xl mx-auto p-8">
+      <div className="relative z-10 max-w-4xl mx-auto p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -121,7 +121,7 @@ function Mastery() {
 
           <div className="flex items-center gap-3 mb-2">
             <span className="text-4xl">🎯</span>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
               Mastery Plan
             </h1>
           </div>

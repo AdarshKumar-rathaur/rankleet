@@ -74,7 +74,7 @@ export default function BountyCard({ bounty, onJoin }) {
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-        <span>Deadline: {displayDeadline.toLocaleDateString()} at midnight</span>
+        <span>Deadline: {displayDeadline.toLocaleDateString(undefined, { timeZone: 'UTC' })} at midnight</span>
         <span>{hasJoined ? "You joined" : isExpired ? "Expired" : "Open to join"}</span>
       </div>
 

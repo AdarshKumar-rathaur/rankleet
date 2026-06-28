@@ -71,9 +71,9 @@ function Join() {
   }, [paramInvite, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
       <div
-        className={`p-8 rounded-xl text-center shadow ${isError ? "bg-red-500/20 border border-red-500" : "bg-gray-800"}`}
+        className={`p-6 md:p-8 rounded-xl text-center shadow w-full max-w-md ${isError ? "bg-red-500/20 border border-red-500" : "bg-gray-800"}`}
       >
         <h1 className="text-2xl font-bold mb-4">RankLeet</h1>
 

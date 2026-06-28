@@ -81,7 +81,7 @@ function Register() {
     <div className="min-h-screen flex items-center justify-center bg-[#050505] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.15),rgba(255,255,255,0))] p-4">
       
       {/* Glassmorphism Card */}
-      <div className="relative w-full max-w-md p-10 backdrop-blur-2xl bg-white/[0.03] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] rounded-3xl overflow-hidden z-10">
+      <div className="relative w-full max-w-md p-6 md:p-10 backdrop-blur-2xl bg-white/[0.03] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] rounded-3xl overflow-hidden z-10">
         
         {/* Subtle inner glow for the card */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-indigo-500/10 blur-[50px] rounded-full pointer-events-none" />
