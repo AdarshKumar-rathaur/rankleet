@@ -9,6 +9,7 @@ let cronTask = null;
 let weeklyAITask = null;
 let masteryPathTask = null;
 let bountyCleanupTask = null;
+let bountyResolutionTask = null;
 
 const refreshLeetCodeStats = () => {
   // ── 30-minute stats refresh ──────────────────────────────────────────────
@@ -148,6 +149,36 @@ const refreshLeetCodeStats = () => {
   });
 
   console.log("[CRON] Weekly AI task scheduled for Mondays at 9 AM");
+
+  // ── Bounty Resolution Task — Runs every hour on the hour ──────────────────
+  if (bountyResolutionTask) bountyResolutionTask.stop();
+
+  bountyResolutionTask = cron.schedule("0 * * * *", async () => {
+    console.log("[CRON-BOUNTY] Checking for expired bounties to resolve...");
+    try {
+      const { resolveBounties } = require("../controllers/bountyController"); 
+      // 1. Create fake req and res objects to mimic an HTTP connection safely
+      const mockReq = {
+        headers: {
+          authorization: `Bearer ${process.env.CRON_SECRET}` 
+        }
+      };
+
+      const mockRes = {
+        status: (statusCode) => ({
+          json: (data) => console.log(`[CRON-BOUNTY] Controller finished with status ${statusCode}:`, data)
+        })
+      };
+
+      // 2. Call the exact logic you already wrote in your controller!
+      await resolveBounties(mockReq, mockRes);
+      
+    } catch (cronError) {
+      console.error("[CRON-BOUNTY] Wrapper error while executing resolution:", cronError.message);
+    }
+  });
+
+  console.log("[CRON] Bounty resolution task scheduled for top of every hour");
 
   // ── Daily bounty cleanup — remove bounties more than 7 days past deadline ──
   if (bountyCleanupTask) bountyCleanupTask.stop();
