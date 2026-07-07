@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import MasteryPathCard from "../components/MasteryPathCard";
@@ -22,7 +22,7 @@ function Mastery() {
     toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchProfile = async (bustCache = false) => {
+  const fetchProfile = useCallback(async (bustCache = false) => {
     try {
       if (bustCache) invalidateCache(API_ENDPOINTS.USERS.PROFILE);
       const res = await cachedGet(API_ENDPOINTS.USERS.PROFILE);
@@ -71,7 +71,7 @@ function Mastery() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -81,7 +81,7 @@ function Mastery() {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
-  }, []);
+  }, [fetchProfile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">

@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from "../utils/apiConstants";
 import { parseInviteCode } from "../utils/helpers";
 import Navbar from "../components/Navbar";
 import StatCard from "../components/StatCard";
+import UserAvatar from "../components/UserAvatar";
 import ArenaCard from "../components/ArenaCard";
 import BountyPointsCard from "../components/BountyPointsCard";
 import AIActivityFeed from "../components/AIActivityFeed";
@@ -47,8 +48,6 @@ function Dashboard() {
     medium: 1800,
     hard: 800,
   });
-
-  const [hasSyncedBountyPoints, setHasSyncedBountyPoints] = useState(false);
 
   const navigate = useNavigate();
   const abortControllerRef = useRef(null);
@@ -110,8 +109,9 @@ function Dashboard() {
       const missingCalendar =
         !freshProfile.submissionCalendar ||
         Object.keys(freshProfile.submissionCalendar || {}).length === 0;
+      const missingAvatar = !freshProfile.avatar;
 
-      if ((missingContest || missingCalendar) && !bustCache) {
+      if ((missingContest || missingCalendar || missingAvatar) && !bustCache) {
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = setTimeout(async () => {
           if (signal?.aborted) return;
@@ -168,6 +168,7 @@ function Dashboard() {
       controller.abort();
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createGroup = async () => {
@@ -286,12 +287,15 @@ function Dashboard() {
       <div className="relative z-10 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="mb-12">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Welcome back, {profile.name}!
-              </h1>
-              <p className="text-gray-400">Keep grinding and climbing the ranks 🚀</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <UserAvatar user={profile} size="lg" className="border border-white/10 shadow-lg" title={profile.name} />
+              <div>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Welcome back, {profile.name}!
+                </h1>
+                <p className="text-gray-400">Keep grinding and climbing the ranks 🚀</p>
+              </div>
             </div>
             {isRefreshing && (
               <div className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border border-blue-500/30 bg-blue-900/20">

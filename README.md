@@ -460,7 +460,7 @@ For issues, questions, or suggestions:
 ## 🗺️ Roadmap
 
 ### v1.1
-- [ ] User profile avatars
+- ✅ User profile avatars
 - [ ] In-game notifications system
 - [ ] Friend requests and messaging
 - [ ] Tournament brackets

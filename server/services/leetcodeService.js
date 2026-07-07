@@ -72,6 +72,9 @@ const fetchLeetCodeStats = async (username) => {
         submitStats {
           acSubmissionNum { difficulty count }
         }
+        profile {
+          userAvatar
+        }
       }
     }`,
     { username: username.trim() }
@@ -86,7 +89,8 @@ const fetchLeetCodeStats = async (username) => {
     else if (item.difficulty === "All") total = item.count;
   });
 
-  return { easy, medium, hard, total };
+  const avatar = data?.data?.matchedUser?.profile?.userAvatar || "";
+  return { easy, medium, hard, total, avatar };
 };
 
 // ── Contest rating ─────────────────────────────────────────────────────────────
@@ -207,7 +211,7 @@ const fetchAllUserData = async (username) => {
 
   const user = username.trim();
 
-  const stats = await fetchLeetCodeStats(user);
+  const { avatar, ...stats } = await fetchLeetCodeStats(user);
   await sleep(300);
   const contestData = await fetchContestRating(user);
   await sleep(300);
@@ -217,6 +221,7 @@ const fetchAllUserData = async (username) => {
 
   return {
     stats,
+    avatar,
     contestRating: contestData.rating,
     contestRanking: contestData.ranking,
     contestPercentile: contestData.percentile,

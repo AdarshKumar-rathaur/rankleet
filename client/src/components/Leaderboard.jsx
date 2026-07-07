@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
+import UserAvatar from "./UserAvatar";
 
 const SORT_OPTIONS = [
   { value: "score", label: "🏆 Rank Score" },
@@ -12,13 +13,6 @@ const AVATAR_COLORS = [
   "bg-blue-500", "bg-purple-500", "bg-pink-500",
   "bg-indigo-500", "bg-emerald-500", "bg-orange-500",
 ];
-
-function getInitials(name) {
-  if (!name || typeof name !== "string") return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
 
 function getRankBadge(index) {
   if (index === 0) return "🥇";
@@ -104,12 +98,12 @@ function Leaderboard({ members }) {
           </div>
 
           {/* Avatar */}
-          <div
-            className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold ${AVATAR_COLORS[index % AVATAR_COLORS.length]}`}
+          <UserAvatar
+            user={user}
+            size="md"
+            className={`ring-2 ring-white/10 ${AVATAR_COLORS[index % AVATAR_COLORS.length]}`}
             title={user.name}
-          >
-            {getInitials(user.name)}
-          </div>
+          />
 
           {/* Name & stats */}
           <div className="flex-1 ml-3 min-w-0">

@@ -3,7 +3,7 @@
  * Manages error state with auto-clear functionality
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export const useError = (initialError = "", autoCleanupTime = 5000) => {
   const [error, setError] = useState(initialError);
@@ -129,8 +129,12 @@ export const useAsync = (asyncFunction, immediate = true) => {
 
   useEffect(() => {
     if (immediate) {
-      execute();
+      const timeout = setTimeout(() => {
+        void execute();
+      }, 0);
+      return () => clearTimeout(timeout);
     }
+    return undefined;
   }, [execute, immediate]);
 
   return {
@@ -149,11 +153,11 @@ export const useAsync = (asyncFunction, immediate = true) => {
  * Tracks previous value of a variable
  */
 export const usePrevious = (value) => {
-  const ref = useRef();
+  const [previous, setPrevious] = useState();
 
   useEffect(() => {
-    ref.current = value;
+    setPrevious(value);
   }, [value]);
 
-  return ref.current;
+  return previous;
 };

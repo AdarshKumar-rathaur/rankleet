@@ -20,6 +20,7 @@ export const useAsyncEffect = (asyncFn, dependencies = []) => {
     return () => {
       isMountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 };
 
@@ -65,5 +66,5 @@ export const useAbortController = () => {
     };
   }, []);
 
-  return abortControllerRef.current;
+  return abortControllerRef;
 };

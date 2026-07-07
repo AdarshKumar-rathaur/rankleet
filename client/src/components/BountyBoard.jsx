@@ -51,7 +51,7 @@ export default function BountyBoard({
     };
 
     fetchBounties();
-  }, [groupId, initialBounties]);
+  }, [groupId, initialBounties, onBountiesChange]);
 
   useEffect(() => {
     if (initialBounties !== null) {

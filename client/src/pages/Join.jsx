@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
@@ -14,7 +14,7 @@ function Join() {
   const [inputValue, setInputValue] = useState("");
   const [isJoining, setIsJoining] = useState(false);
 
-  const joinGroup = async (provided) => {
+  const joinGroup = useCallback(async (provided) => {
     if (isJoining) return; // Prevent double-click
     setIsJoining(true);
     const token = localStorage.getItem("token");
@@ -61,14 +61,14 @@ function Join() {
     } finally {
       setIsJoining(false);
     }
-  };
+  }, [isJoining, inputValue, navigate, paramInvite]);
 
   useEffect(() => {
     // Only call if we have an inviteCode
     if (paramInvite) {
       joinGroup(paramInvite);
     }
-  }, [paramInvite, navigate]);
+  }, [paramInvite, joinGroup]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">

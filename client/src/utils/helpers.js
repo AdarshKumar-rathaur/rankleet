@@ -183,7 +183,7 @@ export const parseInviteCode = (input) => {
     const u = new URL(trimmed);
     const parts = u.pathname.split("/").filter(Boolean);
     if (parts.length > 0) return parts[parts.length - 1];
-  } catch (e) {
+  } catch {
     // not a full URL
   }
 

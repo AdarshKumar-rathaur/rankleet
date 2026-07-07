@@ -1,8 +1,10 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import UserAvatar from "./UserAvatar";
 
 function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const profile = JSON.parse(localStorage.getItem("rankleet-profile") || "null");
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -21,6 +23,12 @@ function Navbar() {
       </Link>
 
       <div className="flex items-center gap-2 flex-wrap">
+        {profile && (
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1.5">
+            <UserAvatar user={profile} size="sm" className="border border-white/10" title={profile.name} />
+            <span className="text-sm text-gray-300 hidden sm:inline">{profile.name}</span>
+          </div>
+        )}
         <Link
           to="/dashboard"
           className={`px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 ${

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API, { cachedGet, invalidateCache } from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
@@ -87,7 +87,7 @@ function Group() {
   const frontendURL = getFrontendUrl();
   const inviteLink = `${frontendURL}/join/${inviteCode}`;
 
-  const fetchData = async (signal) => {
+  const fetchData = useCallback(async (signal) => {
     setLoading(true);
     setError("");
     try {
@@ -161,14 +161,14 @@ function Group() {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [inviteCode]);
 
   useEffect(() => {
     const controller = new AbortController();
     abortRef.current = controller;
     fetchData(controller.signal);
     return () => controller.abort();
-  }, [inviteCode]);
+  }, [fetchData]);
 
   const copyLink = () => {
     navigator.clipboard

@@ -3,10 +3,8 @@ import PropTypes from "prop-types";
 
 export default function StatCard({ difficulty, count, icon, color, totalCount }) {
   const [animatedCount, setAnimatedCount] = useState(0);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const interval = setInterval(() => {
       setAnimatedCount((prev) => {
         if (prev < count) {
@@ -54,9 +52,7 @@ export default function StatCard({ difficulty, count, icon, color, totalCount })
 
   return (
     <div
-      className={`relative p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br ${colors.bg} shadow-2xl ${colors.glow} transition-all duration-700 transform ${
-        mounted ? "scale-100 opacity-100" : "scale-95 opacity-0"
-      } hover:border-white/20 hover:shadow-2xl`}
+      className={`relative p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br ${colors.bg} shadow-2xl ${colors.glow} transition-all duration-700 transform scale-100 opacity-100 hover:border-white/20 hover:shadow-2xl`}
     >
       {/* Animated background glow */}
       <div

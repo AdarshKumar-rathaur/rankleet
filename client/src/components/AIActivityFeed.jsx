@@ -48,8 +48,8 @@ export default function AIActivityFeed({ feedItems = [] }) {
 
   useEffect(() => {
     if (!Array.isArray(feedItems) || feedItems.length === 0) {
-      setDisplayedItems([]);
-      return;
+      const emptyTimeout = setTimeout(() => setDisplayedItems([]), 0);
+      return () => clearTimeout(emptyTimeout);
     }
 
     // Deduplicate by _id, keep 5 most recent
@@ -62,7 +62,7 @@ export default function AIActivityFeed({ feedItems = [] }) {
     });
     const recent = unique.slice(0, 5);
 
-    setDisplayedItems([]);
+    const clearTimeouts = setTimeout(() => setDisplayedItems([]), 0);
 
     const timeouts = recent.map((item, index) =>
       setTimeout(() => {
@@ -73,7 +73,10 @@ export default function AIActivityFeed({ feedItems = [] }) {
       }, index * 200)
     );
 
-    return () => timeouts.forEach(clearTimeout);
+    return () => {
+      clearTimeout(clearTimeouts);
+      timeouts.forEach(clearTimeout);
+    };
   }, [feedItems]);
 
   // Actionable Empty State integrated into your dark-mode UI

@@ -129,7 +129,7 @@ API.interceptors.response.use(
           window.dispatchEvent(
             new CustomEvent("app:unauthorized", { detail: { message: authMessage } })
           );
-        } catch (e) {
+        } catch {
           // ignore if dispatch fails (e.g., non-browser env)
         }
       }

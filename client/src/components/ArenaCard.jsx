@@ -1,13 +1,7 @@
 import PropTypes from "prop-types";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-
-/** Returns initials (up to 2 chars) from a name string */
-function getInitials(name) {
-  if (!name || typeof name !== "string") return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
+import UserAvatar from "./UserAvatar";
 
 export default function ArenaCard({ group, members }) {
   const navigate = useNavigate();
@@ -28,6 +22,25 @@ export default function ArenaCard({ group, members }) {
     return colors[index % colors.length];
   };
 
+  const barHeights = useMemo(() => {
+    const seed = group?.inviteCode || group?.name || "arena";
+    const initialHash = Array.from(seed).reduce(
+      (acc, char) => (acc * 31 + char.charCodeAt(0)) % 70,
+      0
+    );
+
+    return Array.from({ length: 7 }).reduce(
+      (acc, _, index) => {
+        const nextHash = (acc.prevHash * 37 + index + 13) % 70;
+        return {
+          prevHash: nextHash,
+          bars: [...acc.bars, `${30 + nextHash}%`],
+        };
+      },
+      { prevHash: initialHash, bars: [] }
+    ).bars;
+  }, [group?.inviteCode, group?.name]);
+
   // Display up to 4 member avatars (overlapping)
   const displayedMembers = members?.slice(0, 4) || [];
   const additionalCount = Math.max(0, (members?.length || 0) - 4);
@@ -42,11 +55,11 @@ export default function ArenaCard({ group, members }) {
 
       {/* Mini Activity Chart (Placeholder with styled bars) */}
       <div className="absolute top-4 right-4 flex items-end gap-1 h-12 opacity-60 group-hover:opacity-100 transition-opacity">
-        {[...Array(7)].map((_, i) => (
+        {barHeights.map((height, i) => (
           <div
             key={i}
             className="w-1.5 bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t-sm"
-            style={{ height: `${Math.random() * 100}%` }}
+            style={{ height }}
           />
         ))}
       </div>
@@ -68,10 +81,14 @@ export default function ArenaCard({ group, members }) {
           {displayedMembers.map((member, index) => (
             <div
               key={member._id || index}
-              className={`w-8 h-8 rounded-full ${getAvatarColor(index)} border-2 border-gray-900 flex items-center justify-center text-white text-xs font-semibold shadow-lg hover:scale-110 transition-transform`}
-              title={member.name || "Member"}
+              className="relative hover:scale-110 transition-transform"
             >
-              {getInitials(member.name)}
+              <UserAvatar
+                user={member}
+                size="sm"
+                className={`border-2 border-gray-900 shadow-lg ${getAvatarColor(index)}`}
+                title={member.name || "Member"}
+              />
             </div>
           ))}
           {additionalCount > 0 && (

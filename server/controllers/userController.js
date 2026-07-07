@@ -84,6 +84,7 @@ exports.getUserProfile = async (req, res) => {
     res.json({
       _id: user._id,
       name: user.name,
+      avatar: user.avatar || "",
       leetcodeUsername: user.leetcodeUsername,
       stats,
       contestRating: user.contestRating || 0,
@@ -101,13 +102,14 @@ exports.getUserProfile = async (req, res) => {
     const diffMinutes = (Date.now() - lastUpdatedTime) / (1000 * 60);
     const needsMasteryPath = !user.masteryPath;
     const needsCalendar = Object.keys(mapToObject(user.submissionCalendar)).length === 0;
+    const needsAvatar = !user.avatar;
     const isStale = diffMinutes > 30;
 
-    if (isStale || needsMasteryPath || needsCalendar) {
+    if (isStale || needsMasteryPath || needsCalendar || needsAvatar) {
       setImmediate(async () => {
         try {
           // Single batched LeetCode request
-          const { stats: freshStats, contestRating, contestRanking, contestPercentile, submissionCalendar: calendar, contestHistory } =
+          const { stats: freshStats, avatar, contestRating, contestRanking, contestPercentile, submissionCalendar: calendar, contestHistory } =
             await fetchAllUserData(user.leetcodeUsername);
 
           const score = calculateScore(freshStats.easy, freshStats.medium, freshStats.hard);
@@ -125,6 +127,10 @@ exports.getUserProfile = async (req, res) => {
               lastUpdated: new Date(),
             },
           };
+
+          if (avatar) {
+            updateOp.$set.avatar = avatar;
+          }
 
           // Replace full contest history if fetched successfully, otherwise fall back to incremental append
           if (contestHistory?.length > 0) {
@@ -187,7 +193,7 @@ exports.refreshUserData = async (req, res) => {
     const forceMastery = req.body?.force === true;
 
     // Fetch fresh data synchronously (waits for LeetCode API)
-    const { stats: freshStats, contestRating, contestRanking, contestPercentile, submissionCalendar, contestHistory } =
+    const { stats: freshStats, avatar, contestRating, contestRanking, contestPercentile, submissionCalendar, contestHistory } =
       await fetchAllUserData(user.leetcodeUsername);
 
     const score = calculateScore(freshStats.easy, freshStats.medium, freshStats.hard);
@@ -205,6 +211,10 @@ exports.refreshUserData = async (req, res) => {
         lastUpdated: new Date(),
       },
     };
+
+    if (avatar) {
+      updateOp.$set.avatar = avatar;
+    }
 
     // Replace full contest history if fetched successfully, otherwise fall back to incremental append
     if (contestHistory?.length > 0) {
@@ -247,6 +257,7 @@ exports.refreshUserData = async (req, res) => {
     res.json({
       _id: updatedUser._id,
       name: updatedUser.name,
+      avatar: updatedUser.avatar || "",
       leetcodeUsername: updatedUser.leetcodeUsername,
       stats: updatedUser.stats || { easy: 0, medium: 0, hard: 0, total: 0, score: 0 },
       contestRating: updatedUser.contestRating || 0,
@@ -333,7 +344,7 @@ exports.getUserGroups = async (req, res) => {
   try {
     const groups = await Group.find({ members: req.user._id })
       .select("inviteCode name createdBy members")
-      .populate("members", "name")
+      .populate("members", "name avatar")
       .lean();
     res.json(groups);
   } catch (error) {

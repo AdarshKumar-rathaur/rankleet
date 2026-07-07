@@ -58,6 +58,7 @@ exports.registerUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      avatar: user.avatar || "",
       token: generateToken(user._id)
     });
 
@@ -66,7 +67,7 @@ exports.registerUser = async (req, res) => {
       try {
         const { fetchAllUserData } = require("../services/leetcodeService");
 
-        const { stats, contestRating, contestRanking, contestPercentile, submissionCalendar } =
+        const { stats, avatar, contestRating, contestRanking, contestPercentile, submissionCalendar } =
           await fetchAllUserData(user.leetcodeUsername);
 
         const score = calculateScore(stats.easy, stats.medium, stats.hard);
@@ -81,6 +82,10 @@ exports.registerUser = async (req, res) => {
             lastUpdated: new Date(),
           },
         };
+
+        if (avatar) {
+          updateOp.$set.avatar = avatar;
+        }
 
         // Seed first contest history entry if user has a rating
         if (contestRating > 0) {
@@ -123,6 +128,7 @@ exports.loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar || "",
         token: generateToken(user._id),
       });
     } else {

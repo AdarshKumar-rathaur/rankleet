@@ -73,7 +73,7 @@ exports.getGroupByInviteCode = async (req, res) => {
     }
 
     const group = await Group.findOne({ inviteCode: inviteCode.trim() })
-      .populate("members", "name leetcodeUsername stats contestRating bountyPoints")
+      .populate("members", "name avatar leetcodeUsername stats contestRating bountyPoints")
       .populate("createdBy", "_id");
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
@@ -106,7 +106,7 @@ exports.getLeaderboard = async (req, res) => {
 
     const group = await Group.findOne({ inviteCode: inviteCode.trim() }).populate(
       "members",
-      "name leetcodeUsername stats contestRating bountyPoints",
+      "name avatar leetcodeUsername stats contestRating bountyPoints",
     );
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
