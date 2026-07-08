@@ -6,6 +6,7 @@ const { fetchLeetCodeStats, fetchAllUserData } = require("../services/leetcodeSe
 const calculateScore = require("../utils/scoreCalculator");
 const fetchRecentSubmissionTags = require("../services/leetcodeTagsService");
 const generateMasteryPath = require("../services/masteryPathService");
+const { getCookieOptions, getClearCookieOptions } = require("../utils/cookieOptions");
 
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -54,13 +55,17 @@ exports.registerUser = async (req, res) => {
       leetcodeUsername: leetcodeUsername.trim(),
     });
 
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar || "",
-      token: generateToken(user._id)
-    });
+    const token = generateToken(user._id);
+    const cookieOptions = getCookieOptions(req);
+
+    res.status(201)
+      .cookie("token", token, cookieOptions)
+      .json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || "",
+      });
 
     // Fire-and-forget: fetch initial stats + calendar + mastery path for new user
     setImmediate(async () => {
@@ -124,12 +129,14 @@ exports.loginUser = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      res.json({
+      const token = generateToken(user._id);
+      const cookieOptions = getCookieOptions(req);
+
+      res.cookie("token", token, cookieOptions).json({
         _id: user._id,
         name: user.name,
         email: user.email,
         avatar: user.avatar || "",
-        token: generateToken(user._id),
       });
     } else {
       res.status(401).json({ message: "Invalid email or password" });
@@ -137,5 +144,28 @@ exports.loginUser = async (req, res) => {
   } catch (error) {
     console.error("LOGIN ERROR:", error.message);
     res.status(500).json({ message: "Login failed" });
+  }
+};
+
+exports.logoutUser = async (req, res) => {
+  try {
+    res.clearCookie("token", getClearCookieOptions(req));
+    return res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("LOGOUT ERROR:", error.message);
+    return res.status(500).json({ message: "Logout failed" });
+  }
+};
+
+exports.getCurrentUser = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+    const { _id, name, email, avatar } = req.user;
+    return res.json({ _id, name, email, avatar: avatar || "" });
+  } catch (error) {
+    console.error("GET CURRENT USER ERROR:", error.message);
+    res.status(500).json({ message: "Failed to fetch current user" });
   }
 };

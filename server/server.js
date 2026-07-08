@@ -5,21 +5,13 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const cron = require("node-cron");
 const axios = require("axios");
+const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 const validateBody = require("./middleware/validateBody");
 const refreshLeetCodeStats = require("./services/cronJobs");
 const validateEnv = require("./utils/envValidator");
-
-// Auth rate limiting: max 5 requests per 15 minutes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: "Too many authentication attempts, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // API rate limiting: max 100 requests per 15 minutes
 const apiLimiter = rateLimit({
@@ -37,6 +29,8 @@ refreshLeetCodeStats();
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 // 1. Basic Middleware
 const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean);
 app.use(cors({
@@ -44,8 +38,12 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error("CORS not allowed"));
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 }));
+
+app.use(cookieParser());
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -71,7 +69,7 @@ app.get(["/health", "/api/health"], (req, res) => {
 });
 
 // 3. API Routes with rate limiting
-app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
+app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", apiLimiter, require("./routes/userRoutes"));
 app.use("/api/groups", apiLimiter, require("./routes/groupRoutes"));
 app.use("/api/bounties", apiLimiter, require("./routes/bountyRoutes"));

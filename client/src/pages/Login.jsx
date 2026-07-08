@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import API from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
@@ -8,16 +8,6 @@ function Login() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const inviteParam = params.get("invite");
-
-  useEffect(() => {
-    if (localStorage.getItem("token")) {
-      if (inviteParam) {
-        navigate(`/join/${inviteParam}`);
-      } else {
-        navigate("/dashboard");
-      }
-    }
-  }, [navigate, inviteParam, location.search]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,19 +30,12 @@ function Login() {
 
     setLoading(true);
     try {
-      const res = await API.post(API_ENDPOINTS.AUTH.LOGIN, {
+      await API.post(API_ENDPOINTS.AUTH.LOGIN, {
         email: email.toLowerCase().trim(),
         password,
       });
 
-      if (!res.data.token) {
-        setError("Invalid response from server");
-        return;
-      }
-
-      localStorage.setItem("token", res.data.token);
       setError("");
-      
       if (inviteParam) {
         navigate(`/join/${inviteParam}`);
       } else {

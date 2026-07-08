@@ -1,17 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../services/api";
 import { API_ENDPOINTS } from "../utils/apiConstants";
 
 function Register() {
   const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (localStorage.getItem("token")) {
-      navigate("/dashboard");
-    }
-  }, [navigate]);
 
   // Form States
   const [name, setName] = useState("");

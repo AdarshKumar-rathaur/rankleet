@@ -24,9 +24,11 @@ const validateClientEnv = () => {
     }
 
     // Validate API URL format
-    if (key === "VITE_API_URL" && !isValidUrl(value)) {
-      console.error(`❌ Invalid API URL: ${value}`);
-      throw new Error(`Invalid VITE_API_URL format`);
+    if (key === "VITE_API_URL") {
+      if (!isValidUrl(value) && !isRelativeUrl(value)) {
+        console.error(`❌ Invalid API URL: ${value}`);
+        throw new Error(`Invalid VITE_API_URL format`);
+      }
     }
   }
 
@@ -55,4 +57,8 @@ const isValidUrl = (url) => {
   }
 };
 
-export { validateClientEnv, isValidUrl };
+const isRelativeUrl = (url) => {
+  return /^\/[^\s]*$/.test(url);
+};
+
+export { validateClientEnv, isValidUrl, isRelativeUrl };

@@ -1,10 +1,23 @@
 import axios from "axios";
 import { getFriendlyErrorMessage, API_ERRORS, API_ENDPOINTS } from "../utils/apiConstants";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const DEFAULT_API_URL = "/api";
+let API_URL = import.meta.env.VITE_API_URL || DEFAULT_API_URL;
 
-if (!API_URL) {
-  console.error("VITE_API_URL is not configured");
+if (import.meta.env.MODE === "development") {
+  if (typeof API_URL === "string") {
+    const normalizedUrl = API_URL.trim().replace(/\/$/, "");
+    if (normalizedUrl === "http://localhost:5000/api" || normalizedUrl === "http://127.0.0.1:5000/api") {
+      API_URL = DEFAULT_API_URL;
+      console.warn(
+        `Detected local backend API URL in development; switching to proxy path ${DEFAULT_API_URL} to preserve cookies.`
+      );
+    }
+  }
+}
+
+if (!import.meta.env.VITE_API_URL) {
+  console.warn(`VITE_API_URL is not configured, defaulting to ${DEFAULT_API_URL}`);
 }
 
 const API = axios.create({
@@ -13,6 +26,7 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 // Simple in-memory cache for GET requests
@@ -51,24 +65,10 @@ const invalidateCache = (urlPrefix) => {
 
 /**
  * Request Interceptor
- * Adds authorization token and validates request
+ * No client-side token is stored; credentials are sent via cookies.
  */
 API.interceptors.request.use(
-  (req) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      // Validate token format
-      if (typeof token !== "string" || token.split(".").length !== 3) {
-        console.warn("Invalid token format detected");
-        localStorage.removeItem("token");
-      } else {
-        req.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
-    return req;
-  },
+  (req) => req,
   (error) => {
     console.error("Request interceptor error:", error);
     return Promise.reject(error);
@@ -112,19 +112,15 @@ API.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    // Handle token expiration: remove token but do NOT force a full reload.
-    // Let calling components decide how to handle unauthenticated state.
+    // Handle authentication failure; credentials are cookie-based.
     if (status === 401) {
-      // Prefer server-provided message for 401 (e.g., invalid credentials)
       const authMessage = data?.message || API_ERRORS.UNAUTHORIZED;
-      localStorage.removeItem("token");
 
-      // Determine if this was a login attempt — if so, don't trigger global redirect
       const reqUrl = error.config?.url || "";
-      const isLoginAttempt = reqUrl.includes(API_ENDPOINTS.AUTH.LOGIN);
+      const isAuthAttempt = reqUrl.includes(API_ENDPOINTS.AUTH.LOGIN) || reqUrl.includes(API_ENDPOINTS.AUTH.ME);
+      const isExpectedUnauth = reqUrl.includes(API_ENDPOINTS.AUTH.ME);
 
-      if (!isLoginAttempt) {
-        // Notify the app that the session is unauthorized so it can redirect gracefully
+      if (!isAuthAttempt) {
         try {
           window.dispatchEvent(
             new CustomEvent("app:unauthorized", { detail: { message: authMessage } })
@@ -132,6 +128,11 @@ API.interceptors.response.use(
         } catch {
           // ignore if dispatch fails (e.g., non-browser env)
         }
+      }
+
+      // Don't log expected 401s on auth check endpoints
+      if (import.meta.env.MODE === "development" && !isExpectedUnauth) {
+        console.error(`[API Error ${status}]`, authMessage, data);
       }
 
       return Promise.reject({

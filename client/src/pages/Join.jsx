@@ -17,7 +17,6 @@ function Join() {
   const joinGroup = useCallback(async (provided) => {
     if (isJoining) return; // Prevent double-click
     setIsJoining(true);
-    const token = localStorage.getItem("token");
 
     // Determine invite code from param, provided input, or internal input field
     const raw = provided || paramInvite || inputValue;
@@ -28,13 +27,6 @@ function Join() {
     if (!code) {
       setMessage("Invalid invite link or code");
       setIsError(true);
-      setIsJoining(false);
-      return;
-    }
-
-    if (!token) {
-      // Redirect to login and preserve invite code so user can join after login
-      navigate(`/?invite=${code}`);
       setIsJoining(false);
       return;
     }
@@ -54,8 +46,12 @@ function Join() {
         throw new Error("Server did not return a valid Group ID");
       }
     } catch (error) {
-      const errorMsg =
-        error.response?.data?.message || "Invalid or expired invite link";
+      const status = error.response?.status;
+      const errorMsg = error.response?.data?.message || "Invalid or expired invite link";
+      if (status === 401) {
+        navigate(`/?invite=${code}`);
+        return;
+      }
       setMessage(errorMsg);
       setIsError(true);
     } finally {

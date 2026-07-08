@@ -15,8 +15,7 @@ import AuthListener from "./components/AuthListener";
 
 function App() {
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL;
-    if (!apiUrl) return;
+    const apiUrl = import.meta.env.VITE_API_URL || "/api";
 
     const pingServer = async () => {
       try {

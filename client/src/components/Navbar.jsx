@@ -1,4 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import API from "../services/api";
+import { API_ENDPOINTS } from "../utils/apiConstants";
 import UserAvatar from "./UserAvatar";
 
 function Navbar() {
@@ -6,8 +8,14 @@ function Navbar() {
   const location = useLocation();
   const profile = JSON.parse(localStorage.getItem("rankleet-profile") || "null");
 
-  const logout = () => {
-    localStorage.removeItem("token");
+  const logout = async () => {
+    try {
+      await API.post(API_ENDPOINTS.AUTH.LOGOUT);
+    } catch {
+      // ignore logout failure and clear local session state anyway
+    }
+    localStorage.removeItem("rankleet-profile");
+    localStorage.removeItem("rankleet-groups");
     navigate("/");
   };
 
