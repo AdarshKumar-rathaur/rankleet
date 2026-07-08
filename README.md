@@ -117,6 +117,12 @@ PORT=5000
 SERVER_URL=http://localhost:5000
 CLIENT_URL=http://localhost:5173
 
+# Cookie domain (optional)
+# When frontend and API are served from subdomains of the same registrable domain
+# (for example `rankleet.onrender.com` and `api.rankleet.onrender.com`), set
+# this to the parent domain so cookies are first-party for both hosts:
+# COOKIE_DOMAIN=.rankleet.onrender.com
+
 # AI
 LLM_PROVIDER=google
 LLM_API_KEY=your-google-genai-api-key
@@ -126,9 +132,14 @@ LLM_API_KEY=your-google-genai-api-key
 ```bash
 cd ../client
 cat > .env.local << EOF
+# In development use the local backend URL
 VITE_API_URL=http://localhost:5000/api
 EOF
 ```
+
+Notes:
+- In production prefer using a relative API path so cookies are sent as first-party. To do this, leave `VITE_API_URL` unset (or set it to the full URL — the client will automatically use `/api` when it detects the same host).
+- Example (production): do not set `VITE_API_URL` in your build env or set it to the API host; the client will use `/api` for same-host deployments.
 
 ### 3. Install Dependencies
 

@@ -4,6 +4,7 @@ import { getFriendlyErrorMessage, API_ERRORS, API_ENDPOINTS } from "../utils/api
 const DEFAULT_API_URL = "/api";
 let API_URL = import.meta.env.VITE_API_URL || DEFAULT_API_URL;
 
+// In development switch common local backend hostnames to the proxy path to preserve cookies
 if (import.meta.env.MODE === "development") {
   if (typeof API_URL === "string") {
     const normalizedUrl = API_URL.trim().replace(/\/$/, "");
@@ -13,6 +14,20 @@ if (import.meta.env.MODE === "development") {
         `Detected local backend API URL in development; switching to proxy path ${DEFAULT_API_URL} to preserve cookies.`
       );
     }
+  }
+}
+
+// In production prefer a relative `/api` path when the configured VITE_API_URL points to the same host
+// This avoids cross-origin cookie issues when frontend and API share the same registrable domain.
+if (import.meta.env.MODE === "production" && import.meta.env.VITE_API_URL) {
+  try {
+    const parsed = new URL(import.meta.env.VITE_API_URL);
+    if (typeof window !== "undefined" && parsed.hostname === window.location.hostname) {
+      API_URL = DEFAULT_API_URL;
+      console.info(`Using relative API path ${DEFAULT_API_URL} (matched host ${parsed.hostname})`);
+    }
+  } catch (e) {
+    // ignore invalid URL and keep configured value
   }
 }
 

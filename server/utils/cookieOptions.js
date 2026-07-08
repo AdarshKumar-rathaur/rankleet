@@ -7,13 +7,21 @@ const getCookieOptions = (reqOrContext = {}) => {
       reqOrContext.secure === true
   );
 
-  return {
+  const cookieDomain = process.env.COOKIE_DOMAIN || null;
+
+  const opts = {
     httpOnly: true,
     secure,
     sameSite: secure ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
+
+  if (cookieDomain) {
+    opts.domain = cookieDomain;
+  }
+
+  return opts;
 };
 
 const getClearCookieOptions = (reqOrContext = {}) => {
@@ -25,12 +33,20 @@ const getClearCookieOptions = (reqOrContext = {}) => {
       reqOrContext.secure === true
   );
 
-  return {
+  const cookieDomain = process.env.COOKIE_DOMAIN || null;
+
+  const opts = {
     httpOnly: true,
     secure,
     sameSite: secure ? 'none' : 'lax',
     path: '/',
   };
+
+  if (cookieDomain) {
+    opts.domain = cookieDomain;
+  }
+
+  return opts;
 };
 
 module.exports = { getCookieOptions, getClearCookieOptions };
