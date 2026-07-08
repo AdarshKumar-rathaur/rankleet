@@ -35,6 +35,21 @@ if (!import.meta.env.VITE_API_URL) {
   console.warn(`VITE_API_URL is not configured, defaulting to ${DEFAULT_API_URL}`);
 }
 
+// Ensure full API URLs include the `/api` prefix (so endpoints like `/auth/login` resolve to `/api/auth/login`).
+try {
+  if (typeof API_URL === 'string' && (API_URL.startsWith('http://') || API_URL.startsWith('https://'))) {
+    const parsedFull = new URL(API_URL);
+    if (!parsedFull.pathname || parsedFull.pathname === "/") {
+      API_URL = API_URL.replace(/\/$/, '') + '/api';
+    } else if (!parsedFull.pathname.endsWith('/api')) {
+      // If the configured host is missing the `/api` segment, append it
+      API_URL = API_URL.replace(/\/$/, '') + '/api';
+    }
+  }
+} catch (e) {
+  // ignore malformed URL
+}
+
 const API = axios.create({
   baseURL: API_URL,
   timeout: 60000,
