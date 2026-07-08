@@ -7,19 +7,13 @@ const getCookieOptions = (reqOrContext = {}) => {
       reqOrContext.secure === true
   );
 
-  const cookieDomain = process.env.COOKIE_DOMAIN || null;
-
   const opts = {
     httpOnly: true,
     secure,
-    sameSite: secure ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
-
-  if (cookieDomain) {
-    opts.domain = cookieDomain;
-  }
 
   return opts;
 };
@@ -33,18 +27,12 @@ const getClearCookieOptions = (reqOrContext = {}) => {
       reqOrContext.secure === true
   );
 
-  const cookieDomain = process.env.COOKIE_DOMAIN || null;
-
   const opts = {
     httpOnly: true,
     secure,
-    sameSite: secure ? 'none' : 'lax',
+    sameSite: 'lax',
     path: '/',
   };
-
-  if (cookieDomain) {
-    opts.domain = cookieDomain;
-  }
 
   return opts;
 };
