@@ -33,10 +33,25 @@ app.set("trust proxy", 1);
 
 // 1. Basic Middleware
 const VERCEL_URL = process.env.VERCEL_URL || "https://rankleet.vercel.app";
-const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL, VERCEL_URL].filter(Boolean);
+const allowedOrigins = [process.env.CLIENT_URL, VERCEL_URL].filter(Boolean);
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true);
+
+    try {
+      const parsedOrigin = new URL(origin);
+      const isLocalDevHost =
+        (parsedOrigin.hostname === "localhost" || parsedOrigin.hostname === "127.0.0.1") &&
+        ["http:", "https:"].includes(parsedOrigin.protocol);
+
+      if (isLocalDevHost || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+    } catch {
+      // Fall through to the explicit allowlist check below.
+    }
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error("CORS not allowed"));
   },
   credentials: true,

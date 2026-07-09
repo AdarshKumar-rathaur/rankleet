@@ -34,6 +34,14 @@ const bountyParticipantSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    exited: {
+      type: Boolean,
+      default: false,
+    },
+    exitedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { _id: false }
 );

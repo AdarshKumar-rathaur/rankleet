@@ -13,7 +13,7 @@ const validateRequestBody = (req, res, next) => {
     const url = req.originalUrl || "";
 
     // Routes that legitimately send no body — skip empty-body check
-    const noBodyRoutes = ["/join/", "/accept", "/claim", "/refresh", "/sync-points", "/logout"];
+    const noBodyRoutes = ["/join/", "/leave", "/accept", "/claim", "/refresh", "/sync-points", "/logout"];
     const isNoBodyRoute = noBodyRoutes.some((r) => url.includes(r));
 
     if (isNoBodyRoute) {

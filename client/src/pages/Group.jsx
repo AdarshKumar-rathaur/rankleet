@@ -7,6 +7,8 @@ import Navbar from "../components/Navbar";
 import Leaderboard from "../components/Leaderboard";
 import BountyBoard from "../components/BountyBoard";
 import AIActivityFeed from "../components/AIActivityFeed";
+import ConfirmModal from "../components/ConfirmModal";
+import OwnershipTransferModal from "../components/OwnershipTransferModal";
 
 function GroupSkeleton() {
   return (
@@ -77,7 +79,12 @@ function Group() {
   const [error, setError] = useState("");
   const [group, setGroup] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [transferMode, setTransferMode] = useState("leave");
   
   const [aiActivity, setAiActivity] = useState([]);
   const [bounties, setBounties] = useState([]);
@@ -174,18 +181,97 @@ function Group() {
       .catch(() => alert("Failed to copy"));
   };
 
+  const syncDashboardGroups = (updatedInviteCode) => {
+    try {
+      const storedGroups = JSON.parse(localStorage.getItem("rankleet-groups") || "[]");
+      const filteredGroups = storedGroups.filter((storedGroup) => storedGroup?.inviteCode !== updatedInviteCode);
+      localStorage.setItem("rankleet-groups", JSON.stringify(filteredGroups));
+    } catch (storageErr) {
+      console.warn("Failed to sync stored group cache:", storageErr.message);
+    }
+  };
+
   const deleteGroup = async () => {
-    if (isDeleting || !confirm("Delete this group permanently?")) return;
+    if (isDeleting) return;
     setIsDeleting(true);
     try {
       await API.delete(API_ENDPOINTS.GROUPS.DELETE(inviteCode));
       invalidateCache(`/groups/${inviteCode}`);
       invalidateCache(API_ENDPOINTS.USERS.GROUPS);
-      navigate("/dashboard");
+      syncDashboardGroups(inviteCode);
+      navigate("/dashboard", { replace: true, state: { refreshGroups: true } });
     } catch (err) {
-      alert(err.response?.data?.message || err.message || "Delete failed");
+      alert(err.response?.data?.message || err.message || "Failed to delete group");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const openDeleteConfirm = () => {
+    setShowTransferModal(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const openTransferModal = () => {
+    setTransferMode("transfer");
+    setShowDeleteConfirm(false);
+    setShowLeaveConfirm(false);
+    setShowTransferModal(true);
+  };
+
+  const openLeaveTransferModal = () => {
+    setTransferMode("leave");
+    setShowDeleteConfirm(false);
+    setShowLeaveConfirm(false);
+    setShowTransferModal(true);
+  };
+
+  const leaveArena = async () => {
+    if (isLeaving) return;
+    setIsLeaving(true);
+    try {
+      await API.post(API_ENDPOINTS.GROUPS.LEAVE(inviteCode));
+      invalidateCache(`/groups/${inviteCode}`);
+      invalidateCache(API_ENDPOINTS.USERS.GROUPS);
+      syncDashboardGroups(inviteCode);
+      navigate("/dashboard", { replace: true, state: { refreshGroups: true } });
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || "Failed to leave arena";
+      if (err.response?.status === 403 && err.response?.data?.transferRequired) {
+        setShowLeaveConfirm(false);
+        setShowTransferModal(true);
+      } else {
+        alert(message);
+      }
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
+  const transferOwnership = async (newOwnerId, shouldLeave = false) => {
+    if (!newOwnerId || isLeaving) return;
+    setIsLeaving(true);
+    try {
+      await API.patch(API_ENDPOINTS.GROUPS.TRANSFER_OWNERSHIP(inviteCode), { newOwnerId });
+      if (shouldLeave) {
+        await API.post(API_ENDPOINTS.GROUPS.LEAVE(inviteCode));
+      }
+      invalidateCache(`/groups/${inviteCode}`);
+      invalidateCache(API_ENDPOINTS.USERS.GROUPS);
+      syncDashboardGroups(inviteCode);
+      if (shouldLeave) {
+        navigate("/dashboard", { replace: true, state: { refreshGroups: true } });
+      } else {
+        setShowTransferModal(false);
+        setShowLeaveConfirm(false);
+        setShowDeleteConfirm(false);
+        await fetchData(abortRef.current?.signal || null);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Failed to transfer ownership");
+    } finally {
+      setIsLeaving(false);
+      setShowTransferModal(false);
     }
   };
 
@@ -262,22 +348,48 @@ function Group() {
               <div className="bg-gray-800/60 p-3 rounded-lg mb-3 break-all text-sm text-gray-300 font-mono border border-white/5">
                 {inviteLink}
               </div>
-              <button
-                onClick={copyLink}
-                className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-blue-500/30 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium transition-all duration-200"
-              >
-                {copied ? "✓ Copied!" : "📋 Copy Invite Link"}
-              </button>
-
-              {isCreator && (
+              <div className="flex flex-col gap-3">
                 <button
-                  onClick={deleteGroup}
-                  disabled={isDeleting}
-                  className="w-full mt-3 px-4 py-2 rounded-lg backdrop-blur-md border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-all duration-200 disabled:opacity-50"
+                  onClick={copyLink}
+                  className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-blue-500/30 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-medium transition-all duration-200"
                 >
-                  {isDeleting ? "Deleting..." : "🗑️ Delete Group"}
+                  {copied ? "✓ Copied!" : "📋 Copy Invite Link"}
                 </button>
-              )}
+
+                <button
+                  onClick={() => {
+                    if (isCreator) {
+                      openLeaveTransferModal();
+                      return;
+                    }
+                    setShowLeaveConfirm(true);
+                  }}
+                  disabled={isLeaving}
+                  className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-all duration-200 disabled:opacity-50"
+                >
+                  {isCreator ? "🚪 Leave Arena" : "🚪 Leave Arena"}
+                </button>
+
+                {isCreator && (
+                  <button
+                    onClick={openTransferModal}
+                    disabled={isLeaving}
+                    className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-blue-500/30 bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 font-medium transition-all duration-200 disabled:opacity-50"
+                  >
+                    Transfer Ownership
+                  </button>
+                )}
+
+                {isCreator && (
+                  <button
+                    onClick={openDeleteConfirm}
+                    disabled={isDeleting}
+                    className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-200 font-medium transition-all duration-200 disabled:opacity-50"
+                  >
+                    {isDeleting ? "Deleting..." : "🗑️ Delete Group"}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* AI Activity Feed */}
@@ -288,6 +400,39 @@ function Group() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showLeaveConfirm}
+        title="Leave Arena"
+        message="Are you sure you want to leave this arena? You will lose access until you are re-invited."
+        confirmText={isLeaving ? "Leaving..." : "Leave Arena"}
+        cancelText="Stay"
+        isDangerous={true}
+        onCancel={() => setShowLeaveConfirm(false)}
+        onConfirm={leaveArena}
+      />
+
+      <OwnershipTransferModal
+        isOpen={showTransferModal}
+        members={group?.members || []}
+        currentUserId={currentUserId}
+        isSubmitting={isLeaving}
+        onCancel={() => setShowTransferModal(false)}
+        mode={transferMode}
+        onTransfer={(memberId) => transferOwnership(memberId, transferMode === "leave")}
+        onDeleteRequest={openDeleteConfirm}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        title="Delete Group"
+        message="Are you sure you want to delete this group? This cannot be undone and all group data will be removed."
+        confirmText={isDeleting ? "Deleting..." : "Delete Group"}
+        cancelText="Cancel"
+        isDangerous={true}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={deleteGroup}
+      />
     </div>
   );
 }

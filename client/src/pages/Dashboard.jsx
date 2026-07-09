@@ -178,14 +178,18 @@ function Dashboard() {
       const res = await API.post(API_ENDPOINTS.GROUPS.CREATE, {
         name: groupName,
       });
-      setGroups([...groups, res.data]);
+      const createdGroup = res.data?.data || res.data;
+      if (!createdGroup?.inviteCode) {
+        throw new Error("Group was created but the invite code was missing from the response");
+      }
+      setGroups((prevGroups) => [...prevGroups, createdGroup]);
       setShowCreate(false);
       setGroupName("");
-      navigate(`/group/${res.data.inviteCode}`);
+      navigate(`/group/${createdGroup.inviteCode}`);
       invalidateCache(API_ENDPOINTS.USERS.GROUPS);
       invalidateCache(API_ENDPOINTS.USERS.PROFILE);
     } catch (err) {
-      alert(err.message || "Error creating group");
+      alert(err.response?.data?.message || err.message || "Error creating group");
       setShowCreate(false);
       setGroupName("");
     } finally {

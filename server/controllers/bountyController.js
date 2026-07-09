@@ -21,6 +21,8 @@ const normalizeStats = (stats) => ({
   total: Number(stats.total || 0),
 });
 
+const cleanExitedParticipants = (participants = []) => participants.filter((participant) => !participant.exited);
+
 exports.createBounty = async (req, res) => {
   try {
     const { groupId, title, objectiveType, targetAmount, deadline } = req.body;
@@ -309,6 +311,7 @@ exports.resolveBounties = async (req, res) => {
             }
 
             txnBounty.status = "RESOLVED";
+            txnBounty.participants = cleanExitedParticipants(txnBounty.participants);
             await txnBounty.save({ session });
           });
 

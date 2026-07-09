@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
     JOIN: (inviteCode) => `/groups/join/${inviteCode}`,
     GET_BY_ID: (id) => `/groups/${id}`,
     LEADERBOARD: (id) => `/groups/${id}/leaderboard`,
+    LEAVE: (id) => `/groups/${id}/leave`,
+    TRANSFER_OWNERSHIP: (id) => `/groups/${id}/transfer-ownership`,
     DELETE: (id) => `/groups/${id}`,
   },
 

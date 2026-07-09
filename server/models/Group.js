@@ -1,5 +1,20 @@
 const mongoose = require("mongoose");
 
+const exitedMemberSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    exitedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const groupSchema = new mongoose.Schema(
   {
     name: {
@@ -22,6 +37,10 @@ const groupSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    exitedMembers: {
+      type: [exitedMemberSchema],
+      default: [],
+    },
   },
   { timestamps: true },
 );

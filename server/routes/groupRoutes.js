@@ -7,7 +7,9 @@ const {
     joinGroupByLink,
     getGroupByInviteCode,
     getLeaderboard,
-    deleteGroup
+    deleteGroup,
+    leaveGroup,
+    transferGroupOwnership
 } = require('../controllers/groupController');
 
 // Create a new group
@@ -15,6 +17,8 @@ router.post('/create', protect, createGroup);
 router.post("/join/:inviteCode", protect, joinGroupByLink);
 router.get('/:inviteCode', protect, getGroupByInviteCode); // Simplified
 router.get('/:inviteCode/leaderboard', protect, getLeaderboard); // Standard REST
+router.post('/:inviteCode/leave', protect, leaveGroup);
+router.patch('/:inviteCode/transfer-ownership', protect, transferGroupOwnership);
 router.delete('/:inviteCode', protect, deleteGroup);
 
 module.exports = router;
