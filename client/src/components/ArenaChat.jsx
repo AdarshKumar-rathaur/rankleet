@@ -25,7 +25,7 @@ const resolveSocketUrl = () => {
     return "http://127.0.0.1:5000";
   }
 
-  return window.location.origin;
+  return "https://rankleet.onrender.com";
 };
 
 const SOCKET_URL = resolveSocketUrl();
