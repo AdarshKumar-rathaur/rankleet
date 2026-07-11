@@ -5,30 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import API from "../services/api";
-
-const resolveSocketUrl = () => {
-  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
-
-  if (import.meta.env.VITE_API_URL) {
-    try {
-      const apiUrl = new URL(import.meta.env.VITE_API_URL);
-      apiUrl.pathname = "/";
-      apiUrl.search = "";
-      apiUrl.hash = "";
-      return apiUrl.toString().replace(/\/$/, "");
-    } catch {
-      // Fall through to the environment-specific defaults below.
-    }
-  }
-
-  if (import.meta.env.DEV) {
-    return "http://127.0.0.1:5000";
-  }
-
-  return "https://rankleet.onrender.com";
-};
-
-const SOCKET_URL = resolveSocketUrl();
+import { SOCKET_URL } from "../utils/apiConstants";
 
 function ArenaChat({ arenaId, currentUser, members = [] }) {
   const [messages, setMessages] = useState([]);

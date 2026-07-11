@@ -53,10 +53,32 @@ export const API_ENDPOINTS = {
   HEALTH: "/health",
 };
 
-export const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://127.0.0.1:5000" : "https://rankleet.onrender.com");
+const DEFAULT_SOCKET_URL = import.meta.env.DEV ? "http://127.0.0.1:5000" : "https://rankleet.onrender.com";
+
+export const resolveSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+
+  if (import.meta.env.VITE_API_URL) {
+    try {
+      const apiUrl = new URL(import.meta.env.VITE_API_URL);
+
+      if (typeof window !== "undefined" && apiUrl.hostname === window.location.hostname) {
+        return DEFAULT_SOCKET_URL;
+      }
+
+      apiUrl.pathname = "/";
+      apiUrl.search = "";
+      apiUrl.hash = "";
+      return apiUrl.toString().replace(/\/$/, "");
+    } catch {
+      // Fall through to the environment-specific defaults below.
+    }
+  }
+
+  return DEFAULT_SOCKET_URL;
+};
+
+export const SOCKET_URL = resolveSocketUrl();
 
 /**
  * API Error Messages
