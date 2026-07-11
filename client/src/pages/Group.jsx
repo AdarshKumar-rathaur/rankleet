@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import Leaderboard from "../components/Leaderboard";
 import BountyBoard from "../components/BountyBoard";
 import AIActivityFeed from "../components/AIActivityFeed";
+import ArenaChat from "../components/ArenaChat";
 import ConfirmModal from "../components/ConfirmModal";
 import OwnershipTransferModal from "../components/OwnershipTransferModal";
 
@@ -323,7 +324,7 @@ function Group() {
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Leaderboard + Bounties */}
+          {/* Main content column */}
           <div className="lg:col-span-2 space-y-8">
             {/* Leaderboard */}
             <div>
@@ -340,8 +341,25 @@ function Group() {
             />
           </div>
 
-          {/* Right Column: Invite + AI Activity */}
-          <div className="space-y-8">
+          {/* Right sidebar: Chat + Invite + AI Activity */}
+          <div className="space-y-8 lg:col-span-1">
+            {(() => {
+              let cachedProfile = null;
+              try {
+                cachedProfile = JSON.parse(localStorage.getItem("rankleet-profile") || "null");
+              } catch {
+                cachedProfile = null;
+              }
+
+              return (
+            <ArenaChat
+              arenaId={group?._id}
+              currentUser={{ _id: currentUserId, name: cachedProfile?.name || "You" }}
+              members={members}
+            />
+              );
+            })()}
+
             {/* Invite Card */}
             <div className="p-6 rounded-2xl backdrop-blur-xl border border-white/10 bg-gradient-to-br from-gray-900/60 to-gray-900/20">
               <h3 className="text-lg font-bold mb-4 text-white">📤 Invite Members</h3>
@@ -367,7 +385,7 @@ function Group() {
                   disabled={isLeaving}
                   className="w-full px-4 py-2 rounded-lg backdrop-blur-md border border-red-500/30 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium transition-all duration-200 disabled:opacity-50"
                 >
-                  {isCreator ? "🚪 Leave Arena" : "🚪 Leave Arena"}
+                  Leave Arena
                 </button>
 
                 {isCreator && (

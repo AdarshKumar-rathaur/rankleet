@@ -10,7 +10,7 @@ const getCookieOptions = (reqOrContext = {}) => {
   const opts = {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
+    sameSite: secure ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
@@ -30,7 +30,7 @@ const getClearCookieOptions = (reqOrContext = {}) => {
   const opts = {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
+    sameSite: secure ? 'none' : 'lax',
     path: '/',
   };
 

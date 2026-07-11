@@ -1,10 +1,11 @@
 import PropTypes from "prop-types";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UserAvatar from "./UserAvatar";
 
 export default function ArenaCard({ group, members }) {
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleClick = () => {
     navigate(`/group/${group.inviteCode}`);
@@ -45,6 +46,23 @@ export default function ArenaCard({ group, members }) {
   const displayedMembers = members?.slice(0, 4) || [];
   const additionalCount = Math.max(0, (members?.length || 0) - 4);
 
+  useEffect(() => {
+    const storageKey = "rankleet-unread-arenas";
+    const readUnread = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const data = JSON.parse(localStorage.getItem(storageKey) || "{}") || {};
+        setUnreadCount(Number(data[group?.inviteCode] || 0));
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    readUnread();
+    window.addEventListener("arena:unread-count-changed", readUnread);
+    return () => window.removeEventListener("arena:unread-count-changed", readUnread);
+  }, [group?.inviteCode]);
+
   return (
     <div
       onClick={handleClick}
@@ -74,6 +92,12 @@ export default function ArenaCard({ group, members }) {
           <p className="text-xs text-gray-400">
             {`${members?.length || 0} ${(members?.length || 0) === 1 ? "fighter" : "fighters"}`}
           </p>
+          {unreadCount > 0 && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              {unreadCount} new
+            </div>
+          )}
         </div>
 
         {/* Member Avatars - Overlapping */}

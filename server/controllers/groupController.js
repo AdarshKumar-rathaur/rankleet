@@ -173,7 +173,7 @@ exports.transferGroupOwnership = async (req, res) => {
       return res.status(400).json({ message: "Invalid invite code" });
     }
 
-    if (!newOwnerId) {
+    if (!newOwnerId || !mongoose.Types.ObjectId.isValid(newOwnerId)) {
       return res.status(400).json({ message: "New owner is required" });
     }
 

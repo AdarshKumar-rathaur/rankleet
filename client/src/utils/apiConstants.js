@@ -53,6 +53,8 @@ export const API_ENDPOINTS = {
   HEALTH: "/health",
 };
 
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || window.location.origin;
+
 /**
  * API Error Messages
  */
