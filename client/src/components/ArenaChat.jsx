@@ -9,11 +9,23 @@ import API from "../services/api";
 const resolveSocketUrl = () => {
   if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
 
+  if (import.meta.env.VITE_API_URL) {
+    try {
+      const apiUrl = new URL(import.meta.env.VITE_API_URL);
+      apiUrl.pathname = "/";
+      apiUrl.search = "";
+      apiUrl.hash = "";
+      return apiUrl.toString().replace(/\/$/, "");
+    } catch {
+      // Fall through to the environment-specific defaults below.
+    }
+  }
+
   if (import.meta.env.DEV) {
     return "http://127.0.0.1:5000";
   }
 
-  return "/";
+  return window.location.origin;
 };
 
 const SOCKET_URL = resolveSocketUrl();
